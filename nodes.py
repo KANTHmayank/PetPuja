@@ -251,7 +251,7 @@ def cook_node(state: RestaurantState) -> dict:
     for line in state["items"]:
         # Only cook items that are valid and haven't completed cooking yet
         if line["menu_status"] == "valid" and line["cook_status"] != "done":
-            result = cook.invoke({"item": line["item"], "qty": line["qty"]})
+            result = cook.invoke({"item": line["item"], "qty": line["qty"], "retries": line.get("cook_retries", 0)})
             if result["status"] == "done":
                 updated_items.append({**line, "cook_status": "done", "error": None})
             else:
@@ -289,7 +289,7 @@ def serve_node(state: RestaurantState) -> dict:
     for line in state["items"]:
         # Only serve items that are cooked and haven't completed serving yet
         if line["cook_status"] == "done" and line["serve_status"] != "done":
-            result = serve.invoke({"item": line["item"], "qty": line["qty"]})
+            result = serve.invoke({"item": line["item"], "qty": line["qty"], "retries": line.get("serve_retries", 0)})
             if result["status"] == "done":
                 updated_items.append({**line, "serve_status": "done", "error": None})
             else:

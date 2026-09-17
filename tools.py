@@ -16,9 +16,13 @@ from langchain_core.tools import tool
 
 import db
 
-# Realistic failure rates for live demo (exercises resilience without constantly ruining orders)
-COOK_FAILURE_RATE = 0.08
-SERVE_FAILURE_RATE = 0.05
+# Progressive failure rates for live demo & portfolio showcasing:
+# 1st attempt has ~25% chance of transient hiccup to demonstrate LangGraph self-healing.
+# On retry, failure drops to ~5% so items recover reliably.
+INITIAL_COOK_FAILURE_RATE = 0.25
+RETRY_COOK_FAILURE_RATE = 0.05
+INITIAL_SERVE_FAILURE_RATE = 0.12
+RETRY_SERVE_FAILURE_RATE = 0.03
 
 
 @tool
@@ -58,27 +62,36 @@ def take_order(item: str, qty: int) -> dict:
 
 
 @tool
-def cook(item: str, qty: int) -> dict:
-    """Simulate cooking `qty` units of `item`. Fails randomly to exercise retries."""
-    if random.random() < COOK_FAILURE_RATE:
-        return {"status": "failed", "reason": f"kitchen issue while cooking {item}"}
-    return {"status": "done", "reason": f"{qty}x {item} cooked"}
+def cook(item: str, qty: int, retries: int = 0) -> dict:
+    """Simulate cooking `qty` units of `item`. Fails randomly to exercise retries.
+    Uses progressive failure: ~25% on first attempt (retries == 0) to demonstrate
+    LangGraph self-healing, dropping to ~5% on retries so items recover and cook.
+    """
+    fail_rate = INITIAL_COOK_FAILURE_RATE if retries == 0 else RETRY_COOK_FAILURE_RATE
+    if random.random() < fail_rate:
+        reasons = [
+            f"Tandoor temperature dropped while making {item}",
+            f"Spices needed re-simmering for {item}",
+            f"Oil splatter during sautéing {item}",
+            f"Handi steam pressure dropped for {item}",
+        ]
+        return {"status": "failed", "reason": random.choice(reasons)}
+    return {"status": "done", "reason": f"{qty}x {item} cooked to perfection"}
 
 
 @tool
-def serve(item: str, qty: int) -> dict:
+def serve(item: str, qty: int, retries: int = 0) -> dict:
     """Simulate serving `qty` units of `item`. Fails randomly to exercise retries.
-
-    On success, decrements DB stock — this is what actually consumes
-    inventory, since cooking can still fail after take_order confirms
-    availability. Note: because cook/serve currently retry the whole
-    batch (see nodes.py), an item that already succeeded once inside a
-    batch that later fails and retries will get decremented again on the
-    retry — a known simplification, worth fixing with per-item retry
-    tracking before this becomes anything real.
+    Uses progressive failure: ~12% on first attempt, dropping to ~3% on retry.
     """
     item = item.lower().strip()
-    if random.random() < SERVE_FAILURE_RATE:
-        return {"status": "failed", "reason": f"serving mishap with {item}"}
+    fail_rate = INITIAL_SERVE_FAILURE_RATE if retries == 0 else RETRY_SERVE_FAILURE_RATE
+    if random.random() < fail_rate:
+        reasons = [
+            f"Serving tray unbalanced with {item}",
+            f"Table placement delay for {item}",
+            f"Fresh coriander garnish adjustment on {item}",
+        ]
+        return {"status": "failed", "reason": random.choice(reasons)}
     db.decrement_stock(item, qty)
-    return {"status": "done", "reason": f"{qty}x {item} served"}
+    return {"status": "done", "reason": f"{qty}x {item} served hot"}
