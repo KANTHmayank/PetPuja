@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2.60+-FF6F00?logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
-[![Groq](https://img.shields.io/badge/Groq-GPT--OSS--20B-F55036?logo=groq&logoColor=white)](https://groq.com/)
+[![Groq](https://img.shields.io/badge/Groq-Multi--Model%20Fast%20Inference-F55036?logo=groq&logoColor=white)](https://groq.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [Features](#-key-features) • [Architecture](#-architecture) • [Live Deployment](#-cloud-deployment) • [Local Setup](#-local-quickstart) • [API Reference](#-api-endpoints)
@@ -17,7 +17,7 @@
 
 ## 🌟 Overview
 
-**PetPuja (पेटपूजा)** is an end-to-end AI dining experience designed for a high-energy Indian bistro and bar. Rather than relying on simple text chatbots or brittle forms, PetPuja combines a **LangGraph StateGraph**, **Groq's ultra-fast LLM inference (`openai/gpt-oss-20b`)**, and an **interactive glassmorphism frontend** to deliver authentic culinary hospitality.
+**PetPuja (पेटपूजा)** is an end-to-end AI dining experience designed for a high-energy Indian bistro and bar. Rather than relying on simple text chatbots or brittle forms, PetPuja combines a **cyclic LangGraph StateGraph**, **Groq's ultra-fast LLM inference (`openai/gpt-oss-120b`, `20b`, `qwen3.8-27b`)**, and an **interactive glassmorphism frontend** to deliver authentic culinary hospitality.
 
 Meet **Ramoo Kaka**, your AI Maitre D' who understands traditional Indian gastronomy—from street-style samosas and tandoor-roasted chicken tikka to rich overnight-simmered dal makhani and spirited bar concoctions like Long Island Iced Tea (LIIT) and single-malt whiskies.
 
@@ -25,11 +25,13 @@ Meet **Ramoo Kaka**, your AI Maitre D' who understands traditional Indian gastro
 
 ## ✨ Key Features
 
-- **👨‍🍳 Ramoo Kaka (AI Host)**: Warm, cultured dining host that understands culinary nuances, respects guest budgets, handles casual chatter, and suggests royal multi-course pairings.
+- **👨‍🍳 Ramoo Kaka (AI Host & Maitre D')**: Warm, cultured dining host with culinary nuance. Includes a strict dining scope guardrail that politely and humorously deflects non-restaurant questions (LeetCode, coding, homework) back to PetPuja's menu.
+- **🍬 Piece-Level & Multi-Turn Dynamic Pricing**: Supports piece-level ordering for multi-piece dishes (e.g. 5 pcs Gulab Jamun @ $2.25/pc = $11.25, 3 pcs Samosa @ $2.00/pc = $6.00). Seamlessly resolves multi-turn references (e.g. asking cost of 5 pieces, then saying *"I'd like to order 5 pieces"*) and converts pieces to portion equivalents for inventory tracking.
+- **🛡️ Human-in-the-Loop (HITL) with Flexible Order Additions**: Uses LangGraph's `interrupt()` primitive to present itemized bills, suggest pairings (e.g. chilled Beer or Garlic Naan), and allows customers to add items before confirmation (e.g. *"also add a beer"*) without losing previously selected dishes.
+- **🔥 Resilient Kitchen Engine & Partial Fulfillment**: Per-item cooking and serving retry loops with failure simulation. If a dish cannot be prepared, the receipt dynamically adjusts, deducting the unserved item with $0.00 charged.
+- **⚡ Multi-Model Groq Fallback Cascade**: High-availability inference with automatic fallback across `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, and `qwen/qwen3.8-27b` to guarantee seamless uptime against token rate limits.
 - **📜 37-Dish Bistro & Bar Menu**: Authentic North & South Indian delicacies, street food starters, tandoor specials, biryanis, desserts, and a full cocktail and spirits bar backed by SQLite.
-- **🛡️ Human-in-the-Loop (HITL) Confirmation**: Uses LangGraph's `interrupt()` primitive to calculate itemized pricing and pause for customer consent before committing kitchen inventory.
-- **🔥 Resilient Kitchen Engine**: Per-item cooking and serving retry loops with failure simulation, guaranteeing that only failed items are retried without double-decrementing stock.
-- **🧾 Live Kitchen Tracker & Thermal Receipt**: Real-time visual progress stepper and retro digital thermal receipt with accurate item totals.
+- **🧾 Live Kitchen Tracker & Thermal Receipt**: Real-time visual progress stepper and digital retro thermal receipt with accurate item totals.
 - **🎨 Rich Indian Hospitality Aesthetic**: Dark obsidian glassmorphism UI with tandoori crimson, turmeric gold, and brass accents (100% Vanilla CSS).
 
 ---
@@ -148,22 +150,23 @@ Visit **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 
 ```text
 PetPuja/
-├── app.py               # FastAPI backend & Static files mount
-├── db.py                # SQLite menu engine (37 dishes & bar spirits)
-├── graph.py             # LangGraph StateGraph with MemorySaver checkpointer
-├── nodes.py             # Router node (Groq LLM), Cook, Serve, and Respond nodes
-├── edges.py             # Conditional routing decisions (retries, out of stock)
-├── state.py             # RestaurantState TypedDict schema
-├── tools.py             # Simulated deterministic restaurant kitchen tools
+├── app.py                  # FastAPI backend & Static files mount
+├── db.py                   # SQLite menu engine (37 dishes, piece metadata & stock mutations)
+├── graph.py                # LangGraph StateGraph with MemorySaver checkpointer
+├── nodes.py                # Router node (Groq LLM), Cook, Serve, and Respond nodes
+├── edges.py                # Conditional routing decisions (retries, additions, confirmations)
+├── state.py                # RestaurantState TypedDict schema
+├── tools.py                # Deterministic kitchen tools (take_order, cook, serve)
+├── test_piece_ordering.py  # Automated test suite for piece pricing & multi-turn flows
 ├── static/
-│   ├── index.html       # 3-column bistro & bar UI layout
-│   ├── style.css        # Premium Indian glassmorphism design system
-│   └── app.js           # Client-side reactivity, HITL modals, & live tracker
-├── Dockerfile           # Production container for cloud platforms
-├── Procfile             # Process definition for Render / Railway
-├── render.yaml          # Render blueprint configuration
-├── pyproject.toml       # Modern Python packaging configuration
-└── requirements.txt     # Locked production dependencies
+│   ├── index.html          # 3-column bistro & bar UI layout
+│   ├── style.css           # Premium Indian glassmorphism design system
+│   └── app.js              # Client-side reactivity, HITL modals, & live tracker
+├── Dockerfile              # Production container for cloud platforms
+├── Procfile                # Process definition for Render / Railway
+├── render.yaml             # Render blueprint configuration
+├── pyproject.toml          # Modern Python packaging configuration
+└── requirements.txt        # Locked production dependencies
 ```
 
 ---
