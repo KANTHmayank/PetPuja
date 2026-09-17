@@ -10,6 +10,7 @@ Menu data now lives in SQLite (db.py) instead of an in-memory dict.
 """
 
 import random
+import re
 
 from langchain_core.tools import tool
 
@@ -23,17 +24,34 @@ SERVE_FAILURE_RATE = 0.25
 @tool
 def take_order(item: str, qty: int) -> dict:
     """Check whether `item` is on the menu and `qty` units are in stock."""
-    item = item.lower().strip()
-    row = db.get_item(item)
+    clean_item = item.lower().strip()
+    # If the user passed something like "3 pcs samosa" and qty is 1, extract 3
+    match = re.match(r"^\s*(\d+)\s*(pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?", clean_item)
+    if match and qty == 1:
+        extracted_qty = int(match.group(1))
+        if extracted_qty > 0:
+            qty = extracted_qty
+
+    row = db.get_item(clean_item)
 
     if row is None:
         return {"status": "unavailable", "reason": f"'{item}' is not on the menu"}
+
+    canonical_name = row["name"]
     if row["stock"] < qty:
         return {
             "status": "unavailable",
-            "reason": f"only {row['stock']} '{item}' left, {qty} requested",
+            "reason": f"only {row['stock']} '{canonical_name}' left, {qty} requested",
+            "item": canonical_name,
+            "qty": qty,
         }
-    return {"status": "valid", "reason": f"{qty}x {item} confirmed", "price": row["price"]}
+    return {
+        "status": "valid",
+        "reason": f"{qty}x {canonical_name} confirmed",
+        "price": row["price"],
+        "item": canonical_name,
+        "qty": qty,
+    }
 
 
 @tool

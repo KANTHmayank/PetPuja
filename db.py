@@ -7,7 +7,9 @@ of items. The DB file lives next to this script so it works regardless of
 the current working directory the app is launched from.
 """
 
+import difflib
 import os
+import re
 import sqlite3
 from contextlib import contextmanager
 
@@ -106,11 +108,74 @@ def init_db(reset: bool = False) -> None:
             )
 
 
+def normalize_name(name: str) -> str:
+    """Strip leading numbers, unit phrases like 'pcs', 'plates', 'glasses', etc."""
+    cleaned = name.lower().strip()
+    # Strip unit words with or without numbers (e.g., '3 pcs samosa' -> 'samosa', 'plate of veg chowmein' -> 'veg chowmein')
+    cleaned = re.sub(
+        r"^\s*(\d+\s*)?(pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)\s*(of\s+)?(the\s+)?",
+        "",
+        cleaned,
+    ).strip()
+    # Strip any remaining leading digits (e.g., '3 samosas' -> 'samosas')
+    cleaned = re.sub(r"^\s*\d+\s*(of\s+)?(the\s+)?", "", cleaned).strip()
+    # Strip trailing unit words
+    cleaned = re.sub(
+        r"\s+(pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|pints|pint)$",
+        "",
+        cleaned,
+    ).strip()
+    return cleaned
+
+
 def get_item(name: str) -> sqlite3.Row | None:
+    """Find a menu item by exact name, normalized name, plural/singular variation,
+    substring, or fuzzy match."""
+    raw = name.lower().strip()
     with _connect() as conn:
-        return conn.execute(
-            "SELECT * FROM menu_items WHERE name = ?", (name.lower().strip(),)
-        ).fetchone()
+        # 1. Exact match
+        row = conn.execute("SELECT * FROM menu_items WHERE name = ?", (raw,)).fetchone()
+        if row is not None:
+            return row
+
+        # 2. Normalized match (without prefixes like '3 pcs', 'plate of', etc.)
+        norm = normalize_name(raw)
+        if norm:
+            row = conn.execute("SELECT * FROM menu_items WHERE name = ?", (norm,)).fetchone()
+            if row is not None:
+                return row
+
+        # 3. Singular / plural matching
+        target = norm or raw
+        if target.endswith("s") and len(target) > 3:
+            singular = target[:-1]
+            row = conn.execute("SELECT * FROM menu_items WHERE name = ?", (singular,)).fetchone()
+            if row is not None:
+                return row
+            if target.endswith("es") and len(target) > 4:
+                singular_es = target[:-2]
+                row = conn.execute("SELECT * FROM menu_items WHERE name = ?", (singular_es,)).fetchone()
+                if row is not None:
+                    return row
+        else:
+            row = conn.execute("SELECT * FROM menu_items WHERE name = ?", (target + "s",)).fetchone()
+            if row is not None:
+                return row
+
+        # 4. Substring matching against all menu items (e.g. 'samosa' inside '3 pcs samosa')
+        all_rows = conn.execute("SELECT * FROM menu_items").fetchall()
+        for r in all_rows:
+            item_name = r["name"]
+            if target == item_name or target in item_name or item_name in target:
+                return r
+
+        # 5. Close fuzzy matching
+        name_map = {r["name"]: r for r in all_rows}
+        close = difflib.get_close_matches(target, list(name_map.keys()), n=1, cutoff=0.7)
+        if close:
+            return name_map[close[0]]
+
+        return None
 
 
 def get_all_names() -> list[str]:

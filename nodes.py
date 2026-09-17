@@ -4,6 +4,7 @@ around the deterministic functions in tools.py, so they're cheap and fast.
 """
 
 from functools import lru_cache
+import re
 from typing import Literal, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -78,9 +79,10 @@ Here is our live menu with prices, descriptions, and current inventory:
 
 Your responsibilities:
 1. PLACING AN ORDER:
-   - If the guest explicitly wants to order/buy food or drink items (e.g. "I'll have 2 samosas and a beer", "bring me butter chicken with garlic naan and an LIIT", "I want a whiskey and chicken tikka"):
+   - If the guest explicitly wants to order/buy food or drink items (e.g. "I'll have 2 samosas and a beer", "3 pcs samosa", "bring me butter chicken with garlic naan and an LIIT", "I want a whiskey and chicken tikka"):
      Set `is_order: True` and extract each item and quantity into `items`.
-     Match item names to the menu where possible (e.g. "chowmein" -> "chicken chowmein" or "veg chowmein" based on context; "naan" -> "garlic naan" or "butter naan"; "tikka" -> "chicken tikka" or "paneer tikka"; "biryani" -> "chicken biryani" or "veg dum biryani"). If an item is genuinely not on our menu, keep the customer's wording so our order validation node can handle it.
+     IMPORTANT: Match item names to clean canonical menu names (e.g., for "3 pcs samosa" or "3 samosas", set item="samosa", quantity=3; for "2 plates of chowmein", set item="veg chowmein", quantity=2). DO NOT include numbers or unit words (like "pcs", "plates", "glasses") inside the `item` field!
+     Match ambiguous items where appropriate (e.g. "chowmein" -> "veg chowmein"; "naan" -> "garlic naan"; "tikka" -> "chicken tikka"; "biryani" -> "chicken biryani"). If an item is genuinely not on our menu, keep the customer's wording so our order validation node can handle it.
      Leave `response` as None.
 
 2. INQUIRIES, QUESTIONS, RECOMMENDATIONS, OR DINING CHAT:
@@ -121,22 +123,33 @@ Your responsibilities:
         raise e
 
     if result.is_order and result.items:
-        return {
-            "items": [
-                {
-                    "item": i.item.lower().strip(),
-                    "qty": i.quantity or 1,
-                    "price": 0.0,
-                    "menu_status": "pending",
-                    "cook_status": "pending",
-                    "serve_status": "pending",
-                    "cook_retries": 0,
-                    "serve_retries": 0,
-                    "error": None,
-                }
-                for i in result.items
-            ]
-        }
+        normalized_items = []
+        for i in result.items:
+            raw_name = i.item.lower().strip()
+            qty = i.quantity or 1
+            # If quantity is 1 but raw_name starts with a number like "3 pcs samosa", extract it
+            match = re.match(r"^\s*(\d+)\s*(pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?", raw_name)
+            if match and qty == 1:
+                extracted_qty = int(match.group(1))
+                if extracted_qty > 0:
+                    qty = extracted_qty
+
+            clean_name = db.normalize_name(raw_name) or raw_name
+            db_row = db.get_item(clean_name)
+            canonical_name = db_row["name"] if db_row is not None else clean_name
+
+            normalized_items.append({
+                "item": canonical_name,
+                "qty": qty,
+                "price": db_row["price"] if db_row is not None else 0.0,
+                "menu_status": "pending",
+                "cook_status": "pending",
+                "serve_status": "pending",
+                "cook_retries": 0,
+                "serve_retries": 0,
+                "error": None,
+            })
+        return {"items": normalized_items}
 
     # If it's not an order, or no items could be identified
     reply_text = result.response or "Welcome! How can I help you with our menu today?"
@@ -151,8 +164,12 @@ def take_order_node(state: RestaurantState) -> dict:
         status = result["status"]
         price = result.get("price", 0.0)
         reason = result.get("reason")
+        canonical_item = result.get("item", line["item"])
+        qty = result.get("qty", line["qty"])
         updated.append({
             **line,
+            "item": canonical_item,
+            "qty": qty,
             "price": price,
             "menu_status": status,
             "cook_status": "pending",
@@ -162,7 +179,7 @@ def take_order_node(state: RestaurantState) -> dict:
             "error": reason if status != "valid" else None,
         })
         if status == "unavailable":
-            errors.append(reason or f"'{line['item']}' is unavailable")
+            errors.append(reason or f"'{canonical_item}' is unavailable")
 
     error = "; ".join(errors) if errors else None
     valid_items = [l for l in updated if l["menu_status"] == "valid"]
