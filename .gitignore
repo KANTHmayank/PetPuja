@@ -1,0 +1,30 @@
+# Environment secrets
+.env
+*.env
+.env.*
+!.env.example
+
+# Local SQLite databases (auto-created on startup)
+*.db
+*.sqlite
+*.sqlite3
+restaurant.db
+
+# Python bytecode & build
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

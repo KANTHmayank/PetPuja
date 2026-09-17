@@ -1,0 +1,8 @@
+langgraph>=0.2.60
+langchain-groq>=0.2.0
+langchain-core>=0.3.0
+python-dotenv>=1.0.1
+pydantic>=2.7
+fastapi>=0.110.0
+uvicorn>=0.28.0
+

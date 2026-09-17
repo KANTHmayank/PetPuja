@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PetPuja — AI Bistro & Bar | Swagat Hai!</title>
+  <meta name="description" content="Welcome to PetPuja, where culinary hospitality meets state-of-the-art AI. Explore our live menu, get chef recommendations, and track your kitchen orders in real time.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header" id="appHeader">
+      <div class="brand-block">
+        <div class="brand-icon">🍛</div>
+        <div class="brand-text">
+          <div class="brand-title-wrap">
+            <h1 class="brand-name">PetPuja</h1>
+            <span class="brand-devanagari">पेटपूजा</span>
+          </div>
+          <p class="brand-tagline">Ghar Jaisa Swaad, AI Ka Saath • Smart Bistro & Bar</p>
+        </div>
+      </div>
+
+      <div class="header-status-panel">
+        <div class="status-indicator-badge online" id="serverStatusBadge">
+          <span class="pulse-dot"></span>
+          <span class="status-label">Kitchen Live • Groq GPT-OSS-20B</span>
+        </div>
+        <button class="btn btn-subtle" id="resetDbBtn" title="Reset and reseed database inventory">
+          <span class="btn-icon">🔄</span> Reseed Menu
+        </button>
+        <button class="btn btn-subtle" id="clearChatBtn" title="Start a fresh chat thread">
+          <span class="btn-icon">✨</span> New Thread
+        </button>
+      </div>
+    </header>
+
+    <!-- Main 3-Column Layout -->
+    <main class="main-layout" id="mainLayout">
+      
+      <!-- Left Column: Interactive Menu Explorer -->
+      <section class="panel menu-panel" id="menuPanel" aria-label="Restaurant Menu">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <span class="panel-icon">📜</span>
+            <h2 class="panel-title">Live Menu & Stock</h2>
+          </div>
+          <span class="badge badge-accent" id="menuCountBadge">37 Items</span>
+        </div>
+
+        <div class="category-tabs-container" id="categoryTabs">
+          <button class="tab-btn active" data-category="all" id="tabAll">All</button>
+          <button class="tab-btn" data-category="starter" id="tabStarter">Starters 🥟</button>
+          <button class="tab-btn" data-category="main" id="tabMain">Mains 🍲</button>
+          <button class="tab-btn" data-category="dessert" id="tabDessert">Desserts 🍨</button>
+          <button class="tab-btn" data-category="bar" id="tabBar">Bar & Spirits 🍸</button>
+          <button class="tab-btn" data-category="drink" id="tabDrink">Drinks ☕</button>
+        </div>
+
+        <div class="menu-search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="menuSearchInput" class="menu-search-input" placeholder="Search dishes, cocktails, biryani, starters...">
+        </div>
+
+        <div class="menu-items-scroll" id="menuItemsList">
+          <!-- Dynamically populated menu cards -->
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Gathering fresh ingredients from the pantry...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Center Column: Conversational AI Host Chat -->
+      <section class="panel chat-panel" id="chatPanel" aria-label="AI Dining Host Chat">
+        <div class="panel-header chat-header">
+          <div class="host-profile">
+            <div class="host-avatar">👨‍🍳</div>
+            <div class="host-info">
+              <h2 class="host-name">Ramoo Kaka (AI Host)</h2>
+              <span class="host-subtitle">Hospitality Expert & Food Connoisseur</span>
+            </div>
+          </div>
+          <div class="active-turn-pill" id="activeTurnPill">Ready for orders</div>
+        </div>
+
+        <!-- Chat Conversation Stream -->
+        <div class="chat-messages-stream" id="chatMessagesStream">
+          <!-- Welcome Message -->
+          <div class="message-bubble agent-message" id="welcomeMessage">
+            <div class="msg-avatar">👨‍🍳</div>
+            <div class="msg-body">
+              <div class="msg-sender">Ramoo Kaka • PetPuja Maitre D'</div>
+              <div class="msg-text">
+                <strong>Namaste & Swagat Hai! 🙏 Welcome to PetPuja Smart Bistro & Bar.</strong><br>
+                I am your personal dining host. We feature rich Indian specialties like smoky <em>Chicken Tikka</em>, velvety <em>Butter Chicken</em> with hot <em>Garlic Naan</em>, <em>Samosas</em>, <em>Chowmein</em>, alongside our spirited bar offering <em>LIIT</em>, single-malt <em>Whiskey</em>, chilled beers, and handcrafted cocktails.<br><br>
+                Feel free to ask for chef recommendations, explore drinks, check dish availability, or place your order!
+              </div>
+              <div class="msg-timestamp" id="welcomeTimestamp">Just now</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Starter Recommendation Chips -->
+        <div class="quick-chips-bar" id="quickChipsBar">
+          <span class="chips-label">Try asking:</span>
+          <button class="chip-btn" data-query="What do you have in the bar? Tell me about your cocktails and whiskey.">🍸 Bar & Cocktails</button>
+          <button class="chip-btn" data-query="Suggest a royal feast! I have no issue of budget.">👑 Royal Feast (No Budget)</button>
+          <button class="chip-btn" data-query="Tell me about your chicken tikka and butter chicken with garlic naan.">🍗 Butter Chicken & Tikka</button>
+          <button class="chip-btn" data-query="What starters do you have? Samosa or chowmein?">🥟 Samosa & Chowmein</button>
+          <button class="chip-btn" data-query="I have 15 dollars, what is the best Indian combo?">💰 Budget $15 Combo</button>
+          <button class="chip-btn" data-query="Is chicken pizza available?">🍕 Chicken Pizza?</button>
+        </div>
+
+        <!-- Chat Input Form -->
+        <form class="chat-input-form" id="chatForm">
+          <div class="input-container">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Ask a question, explore dishes, or say 'I would like 2 burgers'..." autocomplete="off">
+            <button type="submit" class="btn btn-primary send-btn" id="sendBtn">
+              <span>Send</span>
+              <span class="send-icon">➤</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Kitchen Live Tracker & Digital Receipt -->
+      <section class="panel tracker-panel" id="trackerPanel" aria-label="Kitchen Tracker and Receipt">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <span class="panel-icon">🔥</span>
+            <h2 class="panel-title">Kitchen & Bill Tracker</h2>
+          </div>
+          <span class="badge badge-pulse" id="orderStateBadge">Idle</span>
+        </div>
+
+        <!-- Workflow Stepper Indicator -->
+        <div class="workflow-stepper" id="workflowStepper">
+          <div class="step-node active" id="stepIntake">
+            <div class="step-circle">1</div>
+            <span class="step-text">Intake</span>
+          </div>
+          <div class="step-connector" id="conn1"></div>
+          <div class="step-node" id="stepValidate">
+            <div class="step-circle">2</div>
+            <span class="step-text">Stock</span>
+          </div>
+          <div class="step-connector" id="conn2"></div>
+          <div class="step-node" id="stepConfirm">
+            <div class="step-circle">3</div>
+            <span class="step-text">Confirm</span>
+          </div>
+          <div class="step-connector" id="conn3"></div>
+          <div class="step-node" id="stepCook">
+            <div class="step-circle">4</div>
+            <span class="step-text">Cook</span>
+          </div>
+          <div class="step-connector" id="conn4"></div>
+          <div class="step-node" id="stepServe">
+            <div class="step-circle">5</div>
+            <span class="step-text">Served</span>
+          </div>
+        </div>
+
+        <!-- Dynamic Content Area: Idle / Confirmation / Cooking / Receipt -->
+        <div class="tracker-content-area" id="trackerContentArea">
+          
+          <!-- Idle Placeholder -->
+          <div class="tracker-idle-view" id="trackerIdleView">
+            <div class="idle-graphic">🥘</div>
+            <h3>Pantry is Ready</h3>
+            <p>Place an order with Ramoo Kaka to observe real-time kitchen preparation, per-item retries, and itemized billing.</p>
+          </div>
+
+          <!-- Human-In-The-Loop Confirmation Card (Active when Interrupted) -->
+          <div class="confirmation-card" id="confirmationCard" style="display: none;">
+            <div class="card-alert-header">
+              <span class="alert-icon">⚠️</span>
+              <div class="alert-text">
+                <h4>Human-in-the-Loop Confirmation</h4>
+                <p>Please review your order before it hits the tandoor!</p>
+              </div>
+            </div>
+
+            <div class="confirm-items-list" id="confirmItemsList">
+              <!-- Itemized lines will be injected here -->
+            </div>
+
+            <div class="confirm-total-row">
+              <span>Total Bill Amount:</span>
+              <strong id="confirmTotalAmount">$0.00</strong>
+            </div>
+
+            <div class="confirm-actions-row">
+              <button class="btn btn-confirm-yes" id="btnConfirmYes">
+                <span>✓ Confirm & Send to Kitchen</span>
+              </button>
+              <button class="btn btn-confirm-no" id="btnConfirmNo">
+                <span>✕ Cancel Order</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Per-Item Live Kitchen Board -->
+          <div class="kitchen-live-board" id="kitchenLiveBoard" style="display: none;">
+            <div class="board-header">
+              <h4>Active Kitchen Stations</h4>
+              <span class="badge badge-warning" id="retryCounterBadge">0 Retries</span>
+            </div>
+            <div class="item-progress-list" id="itemProgressList">
+              <!-- Per-item cards will be injected here -->
+            </div>
+          </div>
+
+          <!-- Authentic Thermal Digital Receipt -->
+          <div class="thermal-receipt" id="thermalReceipt" style="display: none;">
+            <div class="receipt-tear-edge top"></div>
+            <div class="receipt-body">
+              <div class="receipt-header">
+                <h3>PETPUJA BISTRO & BAR</h3>
+                <p class="receipt-sub">Authentic Flavors • AI Kitchen</p>
+                <p class="receipt-timestamp" id="receiptTimestamp">Date: 2026-09-17 • Bill #8492</p>
+              </div>
+              <div class="receipt-divider">----------------------------------------</div>
+              <div class="receipt-table-header">
+                <span>ITEM</span>
+                <span>QTY</span>
+                <span>PRICE</span>
+                <span>TOTAL</span>
+              </div>
+              <div class="receipt-divider">----------------------------------------</div>
+              <div class="receipt-lines" id="receiptLines">
+                <!-- Itemized receipts -->
+              </div>
+              <div class="receipt-divider">----------------------------------------</div>
+              <div class="receipt-total-row">
+                <span>GRAND TOTAL:</span>
+                <span id="receiptGrandTotal">$0.00</span>
+              </div>
+              <div class="receipt-footer">
+                <p>⭐⭐⭐⭐⭐</p>
+                <p>Dhanyawaad! Thank you for dining with PetPuja.</p>
+                <div class="receipt-barcode">||||| | |||| ||| |||||| ||||| |||</div>
+              </div>
+            </div>
+            <div class="receipt-tear-edge bottom"></div>
+            <button class="btn btn-print-receipt" id="printReceiptBtn">🖨️ Print Receipt</button>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
