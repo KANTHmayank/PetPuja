@@ -44,7 +44,7 @@ SEED_MENU = [
 
     # Desserts (मीठा और मिष्ठान)
     ("gulab jamun", "dessert", 4.50, 15, "warm golden milk dumplings soaked in fragrant rose and cardamom syrup (2 pcs)"),
-    ("rasmalai", "dessert", 5.50, 12, "soft spongy cottage cheese patties steeped in thickened saffron-pistachio milk"),
+    ("rasmalai", "dessert", 5.50, 12, "soft spongy cottage cheese patties steeped in thickened saffron-pistachio milk (2 pcs)"),
     ("chocolate brownie", "dessert", 4.50, 10, "fudgy warm walnut brownie served with a scoop of vanilla ice cream"),
     ("kheer", "dessert", 4.00, 8, "traditional rice pudding slow-simmered with milk, cardamom, almonds, and saffron"),
     ("ice cream sundae", "dessert", 4.50, 14, "three scoops of rich ice cream with chocolate sauce and roasted nuts"),
@@ -183,11 +183,43 @@ def get_all_names() -> list[str]:
         return [r["name"] for r in conn.execute("SELECT name FROM menu_items")]
 
 
+def get_piece_info(item_name: str) -> dict:
+    """Check if an item has piece-level pricing (e.g., 2 pcs per portion).
+    Returns a dict with pieces_per_portion, price_per_piece, and portion_price.
+    """
+    clean = re.sub(r"\(pcs\)|\(pieces\)|\(pc\)", "", item_name.lower()).strip()
+    row = get_item(clean)
+    if not row:
+        return {"has_pieces": False, "pieces_per_portion": 1, "price_per_piece": 0.0, "portion_price": 0.0, "name": clean}
+
+    desc = row["description"].lower()
+    match = re.search(r"\((\d+)\s*(?:pcs|pc|pieces|piece)\)", desc)
+    if match:
+        pcs = int(match.group(1))
+        if pcs > 0:
+            price_per_pc = round(row["price"] / pcs, 2)
+            return {
+                "has_pieces": True,
+                "pieces_per_portion": pcs,
+                "price_per_piece": price_per_pc,
+                "portion_price": row["price"],
+                "name": row["name"],
+            }
+    return {
+        "has_pieces": False,
+        "pieces_per_portion": 1,
+        "price_per_piece": row["price"],
+        "portion_price": row["price"],
+        "name": row["name"],
+    }
+
+
 def decrement_stock(name: str, qty: int) -> None:
+    clean = re.sub(r"\(pcs\)|\(pieces\)|\(pc\)", "", name.lower()).strip()
     with _connect() as conn:
         conn.execute(
             "UPDATE menu_items SET stock = MAX(0, stock - ?) WHERE name = ?",
-            (qty, name.lower().strip()),
+            (qty, clean),
         )
 
 

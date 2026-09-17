@@ -9,6 +9,7 @@ handed to an LLM directly later, if you want to move to an agentic
 Menu data now lives in SQLite (db.py) instead of an in-memory dict.
 """
 
+import math
 import random
 import re
 
@@ -27,15 +28,30 @@ RETRY_SERVE_FAILURE_RATE = 0.03
 
 @tool
 def take_order(item: str, qty: int) -> dict:
-    """Check whether `item` is on the menu and `qty` units are in stock."""
+    """Check whether `item` is on the menu and `qty` units are in stock.
+    Supports both portion-level and piece-level pricing (e.g. 5 pcs gulab jamun @ $2.25/pc).
+    """
     clean_item = item.lower().strip()
-    # If the user passed something like "3 pcs samosa" and qty is 1, extract 3 and clean item name
-    match = re.match(r"^\s*(\d+)\s*(?:pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?\s*(?:of\s+)?(.*)$", clean_item)
+    is_piece_order = False
+
+    # Check if item name specifies (pcs) or (piece)
+    if "(pcs)" in clean_item or "(pieces)" in clean_item or "(pc)" in clean_item:
+        is_piece_order = True
+        clean_item = re.sub(r"\(pcs\)|\(pieces\)|\(pc\)", "", clean_item).strip()
+
+    # If the user passed something like "3 pcs samosa", extract 3, unit, and item name
+    match = re.match(
+        r"^\s*(\d+)\s*(pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?\s*(?:of\s+)?(.*)$",
+        clean_item,
+    )
     if match:
         extracted_qty = int(match.group(1))
+        unit = match.group(2)
+        if unit in ["pcs", "pc", "pieces", "piece"]:
+            is_piece_order = True
         if extracted_qty > 0 and qty == 1:
             qty = extracted_qty
-        remainder = match.group(2).strip()
+        remainder = match.group(3).strip()
         if remainder:
             clean_item = remainder
 
@@ -45,6 +61,28 @@ def take_order(item: str, qty: int) -> dict:
         return {"status": "unavailable", "reason": f"'{item}' is not on the menu"}
 
     canonical_name = row["name"]
+    piece_info = db.get_piece_info(canonical_name)
+
+    # If this is a piece-level order for an item that has pieces per portion:
+    if is_piece_order and piece_info["has_pieces"]:
+        price = piece_info["price_per_piece"]
+        portions_needed = math.ceil(qty / piece_info["pieces_per_portion"])
+        if row["stock"] < portions_needed:
+            return {
+                "status": "unavailable",
+                "reason": f"only {row['stock']} portions ({row['stock'] * piece_info['pieces_per_portion']} pcs) of '{canonical_name}' left, {qty} pcs requested",
+                "item": f"{canonical_name} (pcs)",
+                "qty": qty,
+            }
+        return {
+            "status": "valid",
+            "reason": f"{qty} pcs {canonical_name} confirmed (@ ${price:.2f}/pc)",
+            "price": price,
+            "item": f"{canonical_name} (pcs)",
+            "qty": qty,
+        }
+
+    # Standard portion-level order
     if row["stock"] < qty:
         return {
             "status": "unavailable",
@@ -84,7 +122,7 @@ def serve(item: str, qty: int, retries: int = 0) -> dict:
     """Simulate serving `qty` units of `item`. Fails randomly to exercise retries.
     Uses progressive failure: ~12% on first attempt, dropping to ~3% on retry.
     """
-    item = item.lower().strip()
+    clean_item = item.lower().strip()
     fail_rate = INITIAL_SERVE_FAILURE_RATE if retries == 0 else RETRY_SERVE_FAILURE_RATE
     if random.random() < fail_rate:
         reasons = [
@@ -93,5 +131,14 @@ def serve(item: str, qty: int, retries: int = 0) -> dict:
             f"Fresh coriander garnish adjustment on {item}",
         ]
         return {"status": "failed", "reason": random.choice(reasons)}
-    db.decrement_stock(item, qty)
+
+    # Convert pieces to portions for inventory decrement
+    base_item = re.sub(r"\(pcs\)|\(pieces\)|\(pc\)", "", clean_item).strip()
+    piece_info = db.get_piece_info(base_item)
+    if piece_info["has_pieces"] and any(p in clean_item for p in ["(pcs)", "(pieces)", "(pc)"]):
+        portions = math.ceil(qty / piece_info["pieces_per_portion"])
+        db.decrement_stock(base_item, portions)
+    else:
+        db.decrement_stock(base_item, qty)
+
     return {"status": "done", "reason": f"{qty}x {item} served hot"}

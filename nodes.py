@@ -23,8 +23,12 @@ GROQ_MODEL = "openai/gpt-oss-20b"
 
 
 class OrderItem(BaseModel):
-    item: str = Field(description="the food or drink item requested, matched to the closest menu item name if possible")
-    quantity: int = Field(default=1, description="how many units requested; default to 1 if unspecified")
+    item: str = Field(description="the food or drink item requested, matched to the closest menu item name if possible (e.g. 'gulab jamun', 'samosa', 'chicken biryani')")
+    quantity: int = Field(default=1, description="how many units or pieces requested; default to 1 if unspecified")
+    unit: Optional[str] = Field(
+        default="portion",
+        description="Specify 'piece' if the customer requested individual pieces/pcs (e.g. '5 pieces', '3 pcs samosa', '5 pieces of rasmalai'). Specify 'portion' for standard portions, plates, bowls, or drinks.",
+    )
 
 
 class RouterOutput(BaseModel):
@@ -53,7 +57,7 @@ class RouterOutput(BaseModel):
     )
 
 
-MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
+MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
 
 
 def invoke_router_llm(prompt_messages: list) -> RouterOutput:
@@ -118,9 +122,17 @@ Here is our live menu with prices, descriptions, and current inventory:
 
 Your responsibilities:
 1. PLACING AN ORDER:
-   - If the guest explicitly wants to order/buy food or drink items (e.g. "I'll have 2 samosas and a beer", "3 pcs samosa", "bring me butter chicken with garlic naan and an LIIT", "I want a whiskey and chicken tikka"):
+   - If the guest explicitly wants to order/buy food or drink items (e.g. "I'll have 2 samosas and a beer", "3 pcs samosa", "bring me butter chicken with garlic naan and an LIIT", "I want a whiskey and chicken tikka", "okay so i would like to order 5 pieces"):
      Set `is_order: True` and extract each item and quantity into `items`.
-     IMPORTANT: Match item names to clean canonical menu names (e.g., for "3 pcs samosa" or "3 samosas", set item="samosa", quantity=3; for "2 plates of chowmein", set item="veg chowmein", quantity=2). DO NOT include numbers or unit words (like "pcs", "plates", "glasses") inside the `item` field!
+     IMPORTANT PIECE-LEVEL VS. PORTION-LEVEL EXTRACTION:
+     - For items sold with piece counts in description (e.g. Samosa 2 pcs @ $4.00, Gulab Jamun 2 pcs @ $4.50, Rasmalai 2 pcs @ $5.50):
+       If the customer orders individual pieces (e.g. "5 pieces", "3 pcs samosa", "5 pieces of rasmalai", "3 pieces of gulab jamun"):
+       Set `item: <canonical name>`, `quantity: <number of pieces>`, and `unit: "piece"`.
+       For example, when ordering "5 pieces" after discussing gulab jamun -> item="gulab jamun", quantity=5, unit="piece".
+       For "3 pcs samosa" or "3 pieces of samosa" -> item="samosa", quantity=3, unit="piece".
+     - For standard portions, plates, or general servings (e.g. "2 biryanis", "1 plate samosa", "1 butter chicken", "2 beers", "2 samosas"):
+       Set `item: <canonical name>`, `quantity: <count>`, and `unit: "portion"`.
+     - Multi-turn reference: If the customer says "okay so i would like to order 5 pieces" or "order 3 pieces" referring to an item discussed in the immediate previous messages (like gulab jamun, samosa, or rasmalai), resolve the item name from the conversation context!
      Match ambiguous items where appropriate (e.g. "chowmein" -> "veg chowmein"; "naan" -> "garlic naan"; "tikka" -> "chicken tikka"; "biryani" -> "chicken biryani"). If an item is genuinely not on our menu, keep the customer's wording so our order validation node can handle it.
      Leave `response` as None.
 
@@ -179,30 +191,60 @@ Your responsibilities:
             for prev in existing_valid:
                 prev_name = prev["item"].lower().strip()
                 if not any(prev_name in e or e in prev_name for e in extracted_names):
-                    all_items_to_process.append(OrderItem(item=prev["item"], quantity=prev["qty"]))
+                    prev_unit = "piece" if "(pcs)" in prev_name else "portion"
+                    all_items_to_process.append(OrderItem(item=prev["item"], quantity=prev["qty"], unit=prev_unit))
 
         normalized_items = []
         for i in all_items_to_process:
             raw_name = i.item.lower().strip()
             qty = i.quantity or 1
+            unit = getattr(i, "unit", "portion") or "portion"
+
+            # Check if piece order is indicated
+            is_piece = (unit == "piece") or any(
+                p in raw_name for p in ["(pcs)", "(pieces)", "(pc)", "pcs", "piece", "pieces"]
+            )
+
             # If quantity is 1 but raw_name starts with a number like "3 pcs samosa", extract it
-            match = re.match(r"^\s*(\d+)\s*(?:pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?\s*(?:of\s+)?(.*)$", raw_name)
+            match = re.match(
+                r"^\s*(\d+)\s*(pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?\s*(?:of\s+)?(.*)$",
+                raw_name,
+            )
             if match:
                 extracted_qty = int(match.group(1))
+                extracted_unit = match.group(2)
+                if extracted_unit in ["pcs", "pc", "pieces", "piece"]:
+                    is_piece = True
                 if extracted_qty > 0 and qty == 1:
                     qty = extracted_qty
-                remainder = match.group(2).strip()
+                remainder = match.group(3).strip()
                 if remainder:
                     raw_name = remainder
 
             clean_name = db.normalize_name(raw_name) or raw_name
             db_row = db.get_item(clean_name)
             canonical_name = db_row["name"] if db_row is not None else clean_name
+            piece_info = db.get_piece_info(canonical_name)
+
+            # Check if last user message explicitly requested pieces (e.g. "okay so i would like to order 5 pieces", "3 pcs samosa")
+            if not is_piece and piece_info["has_pieces"]:
+                piece_match = re.search(r"\b(\d+)\s*(?:pcs|pc|pieces|piece)\b", last_user_msg)
+                if piece_match:
+                    is_piece = True
+                    if len(all_items_to_process) == 1:
+                        qty = int(piece_match.group(1))
+
+            if is_piece and piece_info["has_pieces"]:
+                item_label = f"{canonical_name} (pcs)"
+                item_price = piece_info["price_per_piece"]
+            else:
+                item_label = canonical_name
+                item_price = db_row["price"] if db_row is not None else 0.0
 
             normalized_items.append({
-                "item": canonical_name,
+                "item": item_label,
                 "qty": qty,
-                "price": db_row["price"] if db_row is not None else 0.0,
+                "price": item_price,
                 "menu_status": "pending",
                 "cook_status": "pending",
                 "serve_status": "pending",
