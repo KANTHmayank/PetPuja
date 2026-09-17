@@ -277,12 +277,21 @@ document.addEventListener('DOMContentLoaded', () => {
       removeTypingIndicator();
       activeTurnPill.textContent = 'Ready for orders';
 
+      if (!res.ok) {
+        const errorText = data.detail || 'The kitchen is temporarily busy. Please try asking again in a moment!';
+        appendMessage('Agent', `⚠️ ${errorText}`, false);
+        return;
+      }
+
       if (data.status === 'interrupted') {
         // Human-in-the-loop interruption: Waiting for confirmation
         handleOrderInterrupt(data);
       } else {
-        // Completed response
-        appendMessage('Agent', data.reply, false);
+        // Completed response: ensure non-empty message
+        const replyText = (data.reply && data.reply.trim()) 
+          ? data.reply 
+          : "Namaste! 🙏 How can I assist you with our menu or bar drinks today?";
+        appendMessage('Agent', replyText, false);
         handleCompletedState(data.state);
       }
       // Refresh live menu stock after interactions

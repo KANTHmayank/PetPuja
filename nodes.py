@@ -53,12 +53,51 @@ class RouterOutput(BaseModel):
     )
 
 
-@lru_cache(maxsize=1)
-def get_structured_llm():
-    """Lazily build the Groq client so importing/compiling the graph never
-    needs an API key — only actually calling the router does."""
-    llm = ChatGroq(model=GROQ_MODEL, temperature=0.2, max_retries=3)
-    return llm.with_structured_output(RouterOutput, method="json_schema")
+MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
+
+
+def invoke_router_llm(prompt_messages: list) -> RouterOutput:
+    """Invoke structured output with automatic multi-model fallback on rate limits."""
+    last_error = None
+    for model_name in MODELS:
+        try:
+            llm = ChatGroq(model=model_name, temperature=0.2, max_retries=2).with_structured_output(
+                RouterOutput, method="json_schema"
+            )
+            return llm.invoke(prompt_messages)
+        except Exception as e:
+            last_error = e
+            error_str = str(e).lower()
+            # If rate limit or token quota exceeded, try next fallback model
+            if "rate_limit" in error_str or "429" in error_str or "tpd" in error_str:
+                continue
+
+            # Check if failed_generation was provided in the error body
+            failed_gen = None
+            if hasattr(e, "body") and isinstance(e.body, dict):
+                failed_gen = e.body.get("error", {}).get("failed_generation")
+            if not failed_gen and hasattr(e, "response") and hasattr(e.response, "json"):
+                try:
+                    failed_gen = e.response.json().get("error", {}).get("failed_generation")
+                except Exception:
+                    pass
+            if failed_gen:
+                return RouterOutput(is_order=False, items=[], response=failed_gen.strip())
+            continue
+
+    if last_error:
+        error_str = str(last_error).lower()
+        if "rate_limit" in error_str or "429" in error_str or "tpd" in error_str:
+            return RouterOutput(
+                is_order=False,
+                items=[],
+                response=(
+                    "Namaste! 🙏 Our kitchen and bar are experiencing a high rush of orders right now (API rate limit). "
+                    "Please wait a brief moment and Ramoo Kaka will be right with you!"
+                ),
+            )
+        raise last_error
+    return RouterOutput(is_order=False, items=[], response="Namaste! 🙏 How can I assist you with our menu today?")
 
 
 def router_node(state: RestaurantState) -> dict:
@@ -106,21 +145,7 @@ Your responsibilities:
 """
 
     prompt_messages = [SystemMessage(content=system_prompt)] + list(state["messages"])
-    try:
-        result: RouterOutput = get_structured_llm().invoke(prompt_messages)
-    except Exception as e:
-        # Check if Groq returned failed_generation in the error
-        failed_gen = None
-        if hasattr(e, "body") and isinstance(e.body, dict):
-            failed_gen = e.body.get("error", {}).get("failed_generation")
-        if not failed_gen and hasattr(e, "response") and hasattr(e.response, "json"):
-            try:
-                failed_gen = e.response.json().get("error", {}).get("failed_generation")
-            except Exception:
-                pass
-        if failed_gen:
-            return {"items": [], "messages": [AIMessage(content=failed_gen.strip())]}
-        raise e
+    result: RouterOutput = invoke_router_llm(prompt_messages)
 
     if result.is_order and result.items:
         normalized_items = []

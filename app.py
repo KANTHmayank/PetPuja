@@ -101,6 +101,9 @@ def chat(req: ChatRequest):
             }
 
         last_message = result.get("messages", [])[-1].content if result.get("messages") else ""
+        if not last_message or not last_message.strip():
+            last_message = "Namaste! 🙏 How can I assist you with our menu today?"
+
         return {
             "status": "completed",
             "reply": last_message,
@@ -115,6 +118,18 @@ def chat(req: ChatRequest):
             },
         }
     except Exception as e:
+        error_str = str(e)
+        if "rate_limit" in error_str.lower() or "429" in error_str or "tpd" in error_str:
+            rate_limit_reply = (
+                "Namaste! 🙏 Our kitchen and bar are experiencing a high rush of orders right now (API rate limit). "
+                "Please wait a brief moment and Ramoo Kaka will be right with you!"
+            )
+            return {
+                "status": "completed",
+                "reply": rate_limit_reply,
+                "thread_id": thread_id,
+                "state": {},
+            }
         raise HTTPException(status_code=500, detail=str(e))
 
 
