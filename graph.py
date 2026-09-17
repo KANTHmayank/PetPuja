@@ -38,7 +38,9 @@ def build_graph(checkpointer=None):
         "take_order", route_after_order, {"confirm_order": "confirm_order", "respond": "respond"}
     )
     graph.add_conditional_edges(
-        "confirm_order", route_after_confirm, {"cook": "cook", "end": END}
+        "confirm_order",
+        route_after_confirm,
+        {"cook": "cook", "router": "router", "end": END},
     )
     graph.add_conditional_edges(
         "cook", route_after_cook, {"serve": "serve", "cook": "cook", "respond": "respond"}

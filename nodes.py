@@ -138,6 +138,12 @@ Your responsibilities:
        Remember earlier turns in the conversation thread. If an earlier order in this conversation was partially fulfilled (e.g. Garlic Naan and Masala Chai were successfully served, but Dal Makhani could not be prepared), and the customer insists or asks for their missing dish (e.g. "I want the dish I ordered", "what about my dal makhani", "retry my order"):
        Extract ONLY the missing/unfulfilled dish (e.g., items with item name "dal makhani", quantity 1).
        DO NOT re-order the dishes that were ALREADY served and billed to the customer!
+     - Pre-Confirmation Order Modifications & Additions:
+       Remember earlier turns in the conversation thread. If an order was previously taken or awaiting confirmation (e.g. the customer ordered "chicken biryani"), and the customer now says "also add a beer", "add 1 garlic naan", "make it 2 biryanis", "add a drink alongside", or "with a coke":
+       Set `is_order: True` and extract the COMPLETE updated list of items the customer wants in their order (e.g., items with item "chicken biryani" qty 1, and item "beer" qty 1).
+       DO NOT drop the previously ordered items unless the customer explicitly asked to replace or remove them (e.g. "remove biryani and give me butter chicken").
+       If the customer asks a question or asks for recommendations without naming a specific item (e.g. "what drinks do you have?", "can I add a drink alongside?"):
+       Set `is_order: False`, `items: []`, answer their question with enticing recommendations in character as Ramoo Kaka, and invite them to pick a drink to add to their meal!
 
 3. STRICT GUARDRAIL FOR OFF-TOPIC & NON-RESTAURANT REQUESTS:
    - You are exclusively the dining host at PetPuja Bistro & Bar. You NEVER answer questions outside food, beverages, dining, restaurant ambiance, or reservations.
@@ -151,16 +157,43 @@ Your responsibilities:
     result: RouterOutput = invoke_router_llm(prompt_messages)
 
     if result.is_order and result.items:
+        # Check if we should merge with existing pending items from state
+        # (e.g. user had chicken biryani, and now added a beer)
+        extracted_names = [i.item.lower().strip() for i in result.items]
+        last_user_msg = ""
+        if state.get("messages"):
+            for m in reversed(state["messages"]):
+                if isinstance(m, HumanMessage):
+                    last_user_msg = str(m.content).lower()
+                    break
+
+        is_additive = (
+            any(w in last_user_msg for w in ["also", "add", "alongside", "and", "with", "too", "as well"])
+            or state.get("order_status") == "modifying"
+        )
+        is_replacement = any(w in last_user_msg for w in ["instead", "replace", "remove", "change to", "cancel", "swap"])
+
+        all_items_to_process = list(result.items)
+        if is_additive and not is_replacement and state.get("items"):
+            existing_valid = [l for l in state["items"] if l.get("menu_status") == "valid"]
+            for prev in existing_valid:
+                prev_name = prev["item"].lower().strip()
+                if not any(prev_name in e or e in prev_name for e in extracted_names):
+                    all_items_to_process.append(OrderItem(item=prev["item"], quantity=prev["qty"]))
+
         normalized_items = []
-        for i in result.items:
+        for i in all_items_to_process:
             raw_name = i.item.lower().strip()
             qty = i.quantity or 1
             # If quantity is 1 but raw_name starts with a number like "3 pcs samosa", extract it
-            match = re.match(r"^\s*(\d+)\s*(pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?", raw_name)
-            if match and qty == 1:
+            match = re.match(r"^\s*(\d+)\s*(?:pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?\s*(?:of\s+)?(.*)$", raw_name)
+            if match:
                 extracted_qty = int(match.group(1))
-                if extracted_qty > 0:
+                if extracted_qty > 0 and qty == 1:
                     qty = extracted_qty
+                remainder = match.group(2).strip()
+                if remainder:
+                    raw_name = remainder
 
             clean_name = db.normalize_name(raw_name) or raw_name
             db_row = db.get_item(clean_name)
@@ -216,31 +249,73 @@ def take_order_node(state: RestaurantState) -> dict:
 
 
 def confirm_order_node(state: RestaurantState) -> dict:
-    """Human-in-the-loop: present order summary + total bill and wait for confirmation before cooking."""
+    """Human-in-the-loop: present order summary + total bill, suggest pairings,
+    and wait for confirmation, cancellation, or incremental modifications."""
     valid_items = [l for l in state["items"] if l["menu_status"] == "valid"]
     lines = [
         f"  - {l['qty']}x {l['item']} @ ${l['price']:.2f} = ${l['qty'] * l['price']:.2f}"
         for l in valid_items
     ]
     total = sum(l["qty"] * l["price"] for l in valid_items)
+
+    item_names = [l["item"].lower() for l in valid_items]
+    has_drink = any(
+        any(d in name for d in ["beer", "whiskey", "liit", "cocktail", "mojito", "chai", "lassi", "soda", "coffee", "coke", "tea"])
+        for name in item_names
+    )
+    has_bread = any(any(b in name for b in ["naan", "roti", "bread"]) for name in item_names)
+    has_main_curry_or_biryani = any(
+        any(m in name for m in ["biryani", "butter chicken", "paneer", "dal", "curry", "tikka"])
+        for name in item_names
+    )
+
+    if not has_drink:
+        pairing_tip = "💡 Pair with a Drink: Would you like to add a chilled Beer ($6.50), signature LIIT ($12.00), or Mango Lassi ($4.00) alongside before I fire up the kitchen?"
+    elif has_main_curry_or_biryani and not has_bread:
+        pairing_tip = "💡 Add Breads: Would you like to add some hot Garlic Naan ($3.50) or Butter Naan ($3.00) alongside?"
+    else:
+        pairing_tip = "Shall I place this order with the kitchen, or would you like to add anything else?"
+
     prompt = (
         "Order Summary:\n"
         + "\n".join(lines)
-        + f"\nTotal: ${total:.2f}\n"
-        + "Shall I place this order with the kitchen? (yes/no): "
+        + f"\nTotal: ${total:.2f}\n\n"
+        + pairing_tip
+        + "\n(Confirm with 'yes', cancel with 'no', or simply tell me what else to add!)"
     )
     user_resp = interrupt(prompt)
-    is_confirmed = str(user_resp).strip().lower() in ["yes", "y", "sure", "ok", "confirm", "yeah", "yep"]
-    if is_confirmed:
+    resp_str = str(user_resp).strip()
+    clean_resp = re.sub(r"[^\w\s]", "", resp_str.lower()).strip()
+    words = clean_resp.split()
+
+    confirm_keywords = {"yes", "y", "sure", "ok", "okay", "confirm", "yeah", "yep", "proceed", "fire", "haan", "bilkul"}
+    is_pure_confirm = (
+        clean_resp in confirm_keywords
+        or (len(words) <= 3 and any(w in confirm_keywords for w in words) and not any(w in ["add", "also", "with", "and", "change", "cancel", "no", "dont"] for w in words))
+    )
+
+    cancel_keywords = {"no", "n", "cancel", "stop", "nevermind", "dont", "nahi"}
+    is_pure_cancel = (
+        clean_resp in cancel_keywords
+        or (len(words) <= 3 and any(w in cancel_keywords for w in words) and not any(w in ["add", "also", "with", "and", "yes"] for w in words))
+    )
+
+    if is_pure_confirm:
         return {
             "order_status": "confirmed",
             "total_bill": total,
         }
-    else:
+    elif is_pure_cancel:
         return {
             "order_status": "unsuccessful",
             "error": "Order cancelled by customer",
             "messages": [AIMessage(content="Order cancelled. Let me know if you would like to order anything else!")],
+        }
+    else:
+        # Modification, item addition, or question:
+        return {
+            "order_status": "modifying",
+            "messages": [HumanMessage(content=resp_str)],
         }
 
 

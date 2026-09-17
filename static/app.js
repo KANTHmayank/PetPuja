@@ -338,7 +338,11 @@ document.addEventListener('DOMContentLoaded', () => {
     thermalReceipt.style.display = 'none';
     confirmationCard.style.display = 'flex';
 
-    appendMessage('Agent', "I have put together your order summary in the Kitchen Tracker. Please confirm if everything looks good to fire up the kitchen!", false);
+    const pairingMessage = data.prompt 
+      ? data.prompt.replace(/Order Summary:[\s\S]*?Total: \$[\d.]+\n\n?/, '').trim()
+      : "I have put together your order summary in the Kitchen Tracker. Please confirm if everything looks good to fire up the kitchen!";
+
+    appendMessage('Agent', pairingMessage, false);
   }
 
   // Confirm Buttons

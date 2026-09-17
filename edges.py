@@ -24,6 +24,8 @@ def route_after_order(state: RestaurantState) -> str:
 def route_after_confirm(state: RestaurantState) -> str:
     if state.get("order_status") == "confirmed":
         return "cook"
+    elif state.get("order_status") == "modifying":
+        return "router"
     return "end"
 
 
