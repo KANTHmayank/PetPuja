@@ -1080,9 +1080,15 @@ html, body {
 }
 
 .status-retrying {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--accent-turmeric);
+  animation: pulse-ring 1s infinite;
+}
+
+.status-failed {
   background: rgba(239, 68, 68, 0.2);
   color: #fca5a5;
-  animation: pulse-ring 1s infinite;
+  border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 .status-done {

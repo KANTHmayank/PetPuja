@@ -36,7 +36,11 @@ def route_after_cook(state: RestaurantState) -> str:
     # If any pending item still has retries remaining, retry cooking
     if any(l["cook_retries"] < MAX_COOK_RETRIES for l in pending):
         return "cook"
-    return "respond"  # give up, explain the failure
+    # If cook retries are exhausted for failed items, STILL serve whatever was cooked!
+    cooked = [l for l in valid_items if l["cook_status"] == "done"]
+    if cooked:
+        return "serve"
+    return "respond"  # No items could be cooked at all
 
 
 def route_after_serve(state: RestaurantState) -> str:

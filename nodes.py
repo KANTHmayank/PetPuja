@@ -134,7 +134,10 @@ Your responsibilities:
      - Category Inquiries: If asked about a category (e.g. "what starters do you have?"), present only that category clearly with prices.
      - Full Menu Request: Only if the guest asks to see the entire menu ("what's on the menu?"), provide a clean overview of our categories (Starters, Mains, Desserts, Bar & Spirits, Drinks).
      - Dining banter / Greetings: Be warm, charming, and welcoming.
-     - Multi-turn context: Remember earlier turns in the conversation thread and maintain natural conversational continuity.
+     - Multi-turn context & Re-orders:
+       Remember earlier turns in the conversation thread. If an earlier order in this conversation was partially fulfilled (e.g. Garlic Naan and Masala Chai were successfully served, but Dal Makhani could not be prepared), and the customer insists or asks for their missing dish (e.g. "I want the dish I ordered", "what about my dal makhani", "retry my order"):
+       Extract ONLY the missing/unfulfilled dish (e.g., items with item name "dal makhani", quantity 1).
+       DO NOT re-order the dishes that were ALREADY served and billed to the customer!
 
 3. STRICT GUARDRAIL FOR OFF-TOPIC & NON-RESTAURANT REQUESTS:
    - You are exclusively the dining host at PetPuja Bistro & Bar. You NEVER answer questions outside food, beverages, dining, restaurant ambiance, or reservations.
@@ -320,25 +323,57 @@ def serve_node(state: RestaurantState) -> dict:
 def respond_node(state: RestaurantState) -> dict:
     """Compose receipt or explain terminal failure reasons."""
     valid_items = [l for l in state.get("items", []) if l["menu_status"] == "valid"]
+    served_items = [l for l in valid_items if l.get("serve_status") == "done"]
+    failed_items = [
+        l for l in valid_items
+        if l.get("cook_status") == "failed" or l.get("serve_status") == "failed"
+    ]
     unavailable_items = [l for l in state.get("items", []) if l["menu_status"] == "unavailable"]
 
-    if state.get("serve_status") == "done" and valid_items:
-        order_status = "successful"
+    if served_items:
+        # Bill ONLY for the items that were successfully served to the table
+        actual_total = sum(l["qty"] * l["price"] for l in served_items)
         receipt_lines = [
             f"  - {l['qty']}x {l['item']} @ ${l['price']:.2f} = ${l['qty'] * l['price']:.2f}"
-            for l in valid_items
+            for l in served_items
         ]
-        total = sum(l["qty"] * l["price"] for l in valid_items)
         divider = "-" * 42
-        text = (
-            "🎉 Dhanyavaad! Your order is cooked, prepared, and served fresh!\n"
-            "Here is your PetPuja receipt:\n"
-            f"{divider}\n"
-            + "\n".join(receipt_lines)
-            + f"\n{divider}\n"
-            + f"Total Bill: ${total:.2f}\n\n"
-            + "Swadist bhojan aur drinks ka anand lijiye! (Enjoy your delicious meal & drinks!) 🙏"
-        )
+
+        if not failed_items:
+            order_status = "successful"
+            text = (
+                "🎉 Dhanyavaad! Your order is cooked, prepared, and served fresh!\n"
+                "Here is your PetPuja receipt:\n"
+                f"{divider}\n"
+                + "\n".join(receipt_lines)
+                + f"\n{divider}\n"
+                + f"Total Bill: ${actual_total:.2f}\n\n"
+                + "Swadist bhojan aur drinks ka anand lijiye! (Enjoy your delicious meal & drinks!) 🙏"
+            )
+        else:
+            # Partial fulfillment: some items served, some failed in kitchen/bar
+            order_status = "successful"
+            failed_notes = [
+                f"  - {l['qty']}x {l['item']} could not be prepared ({l.get('error') or 'kitchen issue'}) and was DEDUCTED ($0.00 charged)."
+                for l in failed_items
+            ]
+            text = (
+                "🎉 Dhanyavaad! Your order has been partially served!\n"
+                "Here is your adjusted PetPuja receipt (billed ONLY for served items):\n"
+                f"{divider}\n"
+                + "\n".join(receipt_lines)
+                + f"\n{divider}\n"
+                + f"Total Bill: ${actual_total:.2f}\n\n"
+                + "⚠️ Kitchen Update:\n"
+                + "\n".join(failed_notes)
+                + "\n\nYou have NOT been charged for unfulfilled items. If you would like to retry the missing dish or pick an alternative, just let Ramoo Kaka know! 🙏"
+            )
+
+        return {
+            "total_bill": actual_total,
+            "order_status": order_status,
+            "messages": [AIMessage(content=text)],
+        }
     elif unavailable_items:
         order_status = "unsuccessful"
         reason = state.get("error") or "Requested item(s) are unavailable"
@@ -346,25 +381,18 @@ def respond_node(state: RestaurantState) -> dict:
     elif state.get("order_status") == "unsuccessful" and state.get("error") == "Order cancelled by customer":
         order_status = "unsuccessful"
         text = "Order cancelled. Let me know if you would like to order anything else!"
-    elif state.get("cook_status") == "failed":
+    elif failed_items:
         order_status = "unsuccessful"
-        failed_items = [l for l in valid_items if l["cook_status"] != "done"]
-        reasons = [f"{l['item']} ({l['error']})" for l in failed_items]
-        reason_str = "; ".join(reasons) if reasons else (state.get("error") or "Kitchen cooking issue")
-        text = f"Order Unsuccessful: Kitchen cooking retry attempts exhausted. Reason: {reason_str}."
-    elif state.get("serve_status") == "failed":
-        order_status = "unsuccessful"
-        failed_items = [l for l in valid_items if l["serve_status"] != "done"]
-        reasons = [f"{l['item']} ({l['error']})" for l in failed_items]
-        reason_str = "; ".join(reasons) if reasons else (state.get("error") or "Serving mishap")
-        text = f"Order Unsuccessful: Serving retry attempts exhausted. Reason: {reason_str}."
+        reasons = [f"{l['item']} ({l.get('error') or 'kitchen issue'})" for l in failed_items]
+        reason_str = "; ".join(reasons)
+        text = f"Order Unsuccessful: Kitchen issue with {reason_str}. No charges were made ($0.00). Would you like to try a different dish?"
     else:
         order_status = "unsuccessful"
         reason = state.get("error") or "An unexpected issue occurred while processing your order"
-        text = f"Order Unsuccessful: {reason}."
-
+        text = f"Order Unsuccessful: {reason}. No charges were made."
 
     return {
+        "total_bill": 0.0,
         "order_status": order_status,
         "messages": [AIMessage(content=text)],
     }

@@ -405,9 +405,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (serveDone) {
           statusText = '🍽️ Served & Placed';
           statusBadgeClass = 'status-done';
+        } else if (cookDone && item.serve_status === 'failed') {
+          statusText = '⚠️ Serving Issue (Cancelled)';
+          statusBadgeClass = 'status-failed';
         } else if (cookDone) {
-          statusText = '✅ Cooked (Serving...)';
-          statusBadgeClass = 'status-cooking';
+          statusText = '✅ Cooked & Ready';
+          statusBadgeClass = 'status-done';
+        } else if (item.cook_status === 'failed') {
+          statusText = '❌ Kitchen Issue (Deducted)';
+          statusBadgeClass = 'status-failed';
         } else if (retries > 0) {
           statusText = `🔄 Retry (${retries})`;
           statusBadgeClass = 'status-retrying';
@@ -427,10 +433,13 @@ document.addEventListener('DOMContentLoaded', () => {
       retryCounterBadge.textContent = `${totalRetries} Retries`;
     }
 
-    // If order was served and successful: Render Receipt
+    // If order has served items and was marked successful: Render Receipt
     if (state.order_status === 'successful') {
+      const served = validItems.filter(i => i.serve_status === 'done');
+      const failed = validItems.filter(i => i.cook_status === 'failed' || i.serve_status === 'failed');
+
       updateStepper('done');
-      orderStateBadge.textContent = 'Served';
+      orderStateBadge.textContent = failed.length > 0 ? 'Partially Served' : 'Served';
       
       kitchenLiveBoard.style.display = 'none';
       confirmationCard.style.display = 'none';
@@ -440,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const now = new Date();
       receiptTimestamp.textContent = `Date: ${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Bill #${Math.floor(1000 + Math.random() * 9000)}`;
 
-      receiptLines.innerHTML = validItems.map(item => `
+      const servedRows = served.map(item => `
         <div class="receipt-row">
           <span style="text-transform: capitalize;">${item.item}</span>
           <span>${item.qty}</span>
@@ -449,7 +458,20 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `).join('');
 
-      const grandTotal = state.total_bill || validItems.reduce((acc, i) => acc + (i.qty * i.price), 0);
+      const failedRows = failed.map(item => `
+        <div class="receipt-row" style="color: #ef4444; opacity: 0.85; font-size: 0.78rem;">
+          <span style="text-transform: capitalize;">⚠️ ${item.item} (Cancelled)</span>
+          <span>${item.qty}</span>
+          <span>Deducted</span>
+          <span>$0.00</span>
+        </div>
+      `).join('');
+
+      receiptLines.innerHTML = servedRows + failedRows;
+
+      const grandTotal = (state.total_bill !== null && state.total_bill !== undefined)
+        ? state.total_bill 
+        : served.reduce((acc, i) => acc + (i.qty * i.price), 0);
       receiptGrandTotal.textContent = `$${grandTotal.toFixed(2)}`;
     } else if (state.order_status === 'unsuccessful') {
       orderStateBadge.textContent = 'Order Failed / Cancelled';

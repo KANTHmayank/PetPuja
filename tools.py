@@ -16,21 +16,24 @@ from langchain_core.tools import tool
 
 import db
 
-# Simulated failure rates so the retry loops actually get exercised.
-COOK_FAILURE_RATE = 0.35
-SERVE_FAILURE_RATE = 0.25
+# Realistic failure rates for live demo (exercises resilience without constantly ruining orders)
+COOK_FAILURE_RATE = 0.08
+SERVE_FAILURE_RATE = 0.05
 
 
 @tool
 def take_order(item: str, qty: int) -> dict:
     """Check whether `item` is on the menu and `qty` units are in stock."""
     clean_item = item.lower().strip()
-    # If the user passed something like "3 pcs samosa" and qty is 1, extract 3
-    match = re.match(r"^\s*(\d+)\s*(pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?", clean_item)
-    if match and qty == 1:
+    # If the user passed something like "3 pcs samosa" and qty is 1, extract 3 and clean item name
+    match = re.match(r"^\s*(\d+)\s*(?:pcs|pc|pieces|piece|plates|plate|portions|portion|glasses|glass|bottles|bottle|cans|can|bowls|bowl|servings|serving|pints|pint)?\s*(?:of\s+)?(.*)$", clean_item)
+    if match:
         extracted_qty = int(match.group(1))
-        if extracted_qty > 0:
+        if extracted_qty > 0 and qty == 1:
             qty = extracted_qty
+        remainder = match.group(2).strip()
+        if remainder:
+            clean_item = remainder
 
     row = db.get_item(clean_item)
 
