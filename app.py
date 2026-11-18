@@ -4,7 +4,7 @@ from typing import Optional
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -14,7 +14,11 @@ from langgraph.types import Command
 from graph import build_graph
 import db
 
-app = FastAPI(title="PetPuja - AI Bistro API", version="1.0.0")
+app = FastAPI(
+    title="PetPuja - AI Bistro API",
+    version="1.0.0",
+    redirect_slashes=False,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,7 +42,16 @@ class ConfirmRequest(BaseModel):
     thread_id: str
 
 
-@app.get("/api/menu")
+router = APIRouter()
+
+
+@router.get("/health")
+def health_check():
+    """Service health check."""
+    return {"status": "ok", "service": "PetPuja - AI Bistro & Bar"}
+
+
+@router.get("/menu")
 def get_menu():
     """Return all menu items with real-time stock and prices."""
     with db._connect() as conn:
@@ -58,7 +71,7 @@ def get_menu():
     ]
 
 
-@app.post("/api/chat")
+@router.post("/chat")
 def chat(req: ChatRequest):
     """Send customer message to PetPuja's AI Maitre D'."""
     thread_id = req.thread_id or str(uuid.uuid4())
@@ -133,7 +146,7 @@ def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/confirm")
+@router.post("/confirm")
 def confirm_order(req: ConfirmRequest):
     """Resume the interrupted graph with confirmation action."""
     config = {"configurable": {"thread_id": req.thread_id}}
@@ -167,19 +180,23 @@ def confirm_order(req: ConfirmRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/reset")
+@router.post("/reset")
 def reset_database():
     """Reset the SQLite menu database and reseed."""
     db.init_db(reset=True)
     return {"status": "ok", "message": "Menu database re-seeded successfully."}
 
 
-# Mount static directory for frontend
-static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-if not os.path.exists(static_dir):
-    os.makedirs(static_dir)
+# Mount API router both under /api and root to support Vercel rewrite patterns and direct requests
+app.include_router(router, prefix="/api")
+app.include_router(router)
 
-app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+# Mount static directory for frontend (serves public or static folder)
+for folder in ["public", "static"]:
+    cand = os.path.join(os.path.dirname(os.path.abspath(__file__)), folder)
+    if os.path.exists(cand):
+        app.mount("/", StaticFiles(directory=cand, html=True), name="static")
+        break
 
 if __name__ == "__main__":
     import uvicorn

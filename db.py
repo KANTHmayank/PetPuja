@@ -10,10 +10,25 @@ the current working directory the app is launched from.
 import difflib
 import os
 import re
+import shutil
 import sqlite3
+import tempfile
 from contextlib import contextmanager
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "restaurant.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# On Vercel / serverless environment, the deployment root directory is read-only.
+# We detect Vercel or read-only filesystem and use the system temp directory.
+if os.environ.get("VERCEL") or not os.access(BASE_DIR, os.W_OK):
+    DB_PATH = os.path.join(tempfile.gettempdir(), "restaurant.db")
+    bundled_db = os.path.join(BASE_DIR, "restaurant.db")
+    if not os.path.exists(DB_PATH) and os.path.exists(bundled_db):
+        try:
+            shutil.copy2(bundled_db, DB_PATH)
+        except Exception:
+            pass
+else:
+    DB_PATH = os.path.join(BASE_DIR, "restaurant.db")
 
 # (name, category, price, stock, description)
 # (name, category, price, stock, description)
@@ -72,7 +87,7 @@ CATEGORY_ORDER = ["starter", "main", "dessert", "bar", "drink"]
 
 @contextmanager
 def _connect():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=20.0)
     conn.row_factory = sqlite3.Row
     try:
         yield conn

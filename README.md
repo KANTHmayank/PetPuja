@@ -63,21 +63,37 @@ flowchart TD
 
 ## 🚀 Cloud Deployment
 
-### Option 1: Deploy on Render (Recommended • 100% Free)
+### Option 1: Deploy on Vercel (Recommended • Instant Global CDN • Zero Spin-Down)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
 
-1. Fork or push this repository to GitHub: `https://github.com/KANTHmayank/PetPuja.git`
-2. Go to [Render Dashboard](https://dashboard.render.com/) and click **New + ➔ Web Service**.
-3. Connect your GitHub account and select the **PetPuja** repository.
-4. Configure the settings:
-   - **Environment**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn app:app --host 0.0.0.0 --port $PORT`
-5. Under **Environment Variables**, add:
-   - `GROQ_API_KEY`: Your Groq API key (`gsk_...`)
-   - `PYTHON_VERSION`: `3.12.0`
-6. Click **Create Web Service**. Your app will be live with a public HTTPS URL (e.g., `https://petpuja.onrender.com`)!
+Deploying to **Vercel** eliminates the spin-down latency common on traditional free-tier container platforms (like Render). The glassmorphic frontend is served globally via Vercel's Edge CDN with zero cold-start delay, while the Python FastAPI backend executes as a high-performance serverless function.
+
+1. Push your updated code to GitHub:
+   ```bash
+   git add .
+   git commit -m "Configure PetPuja for complete Vercel serverless deployment"
+   git push origin main
+   ```
+2. Navigate to [Vercel Dashboard](https://vercel.com/new) and log in.
+3. Select **"Import Project"** and choose your **`PetPuja`** repository.
+4. In the Project Configuration screen:
+   - **Framework Preset**: Leave as *Other* (or auto-detected).
+   - **Root Directory**: `./` (leave default).
+   - Under **Environment Variables**, add:
+     - **Name**: `GROQ_API_KEY`
+     - **Value**: `gsk_...` (Your Groq API key from [Groq Console](https://console.groq.com/keys))
+5. Click **Deploy**. In under a minute, your restaurant app will be live on a fast `.vercel.app` domain!
+
+---
+
+### Option 2: Deploy on Render
+
+If you still wish to run a dedicated container on Render:
+1. Connect your GitHub repository to [Render](https://dashboard.render.com/).
+2. Select **Web Service** with Python runtime.
+3. Set build command: `pip install -r requirements.txt` and start command: `uvicorn app:app --host 0.0.0.0 --port $PORT`.
+4. Add `GROQ_API_KEY` in Environment Variables.
 
 ---
 
@@ -150,21 +166,22 @@ Visit **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 
 ```text
 PetPuja/
-├── app.py                  # FastAPI backend & Static files mount
-├── db.py                   # SQLite menu engine (37 dishes, piece metadata & stock mutations)
+├── api/
+│   └── index.py            # Vercel Serverless Function entrypoint
+├── public/                 # Edge CDN static frontend (0ms cold start)
+│   ├── index.html          # 3-column bistro & bar UI layout
+│   ├── style.css           # Premium Indian glassmorphism design system
+│   └── app.js              # Client-side reactivity, HITL modals, & live tracker
+├── app.py                  # FastAPI backend with multi-prefix routing
+├── db.py                   # SQLite menu engine (37 dishes, /tmp ephemeral storage for Vercel)
 ├── graph.py                # LangGraph StateGraph with MemorySaver checkpointer
 ├── nodes.py                # Router node (Groq LLM), Cook, Serve, and Respond nodes
 ├── edges.py                # Conditional routing decisions (retries, additions, confirmations)
 ├── state.py                # RestaurantState TypedDict schema
 ├── tools.py                # Deterministic kitchen tools (take_order, cook, serve)
 ├── test_piece_ordering.py  # Automated test suite for piece pricing & multi-turn flows
-├── static/
-│   ├── index.html          # 3-column bistro & bar UI layout
-│   ├── style.css           # Premium Indian glassmorphism design system
-│   └── app.js              # Client-side reactivity, HITL modals, & live tracker
-├── Dockerfile              # Production container for cloud platforms
-├── Procfile                # Process definition for Render / Railway
-├── render.yaml             # Render blueprint configuration
+├── vercel.json             # Vercel serverless functions & rewrite configuration
+├── .vercelignore           # Optimized build deployment exclusions
 ├── pyproject.toml          # Modern Python packaging configuration
 └── requirements.txt        # Locked production dependencies
 ```
