@@ -62,10 +62,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Resilient API fetcher supporting both /api/endpoint and /endpoint on Vercel
+  async function apiFetch(url, options = {}) {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok && (res.status === 404 || res.status === 405) && url.startsWith('/api/')) {
+        const fallbackUrl = url.replace('/api/', '/');
+        const fallbackRes = await fetch(fallbackUrl, options);
+        if (fallbackRes.ok) return fallbackRes;
+      }
+      return res;
+    } catch (err) {
+      if (url.startsWith('/api/')) {
+        const fallbackUrl = url.replace('/api/', '/');
+        return await fetch(fallbackUrl, options);
+      }
+      throw err;
+    }
+  }
+
   // 1. Fetch & Render Menu
   async function fetchMenu() {
     try {
-      const res = await fetch('/api/menu');
+      const res = await apiFetch('/api/menu');
       if (!res.ok) throw new Error('Failed to load menu');
       menuData = await res.json();
       menuCountBadge.textContent = `${menuData.length} Items`;
@@ -267,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     orderStateBadge.textContent = 'Processing';
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await apiFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: query, thread_id: threadId })
@@ -364,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      const res = await fetch('/api/confirm', {
+      const res = await apiFetch('/api/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: action, thread_id: threadId })
@@ -492,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
   resetDbBtn.addEventListener('click', async () => {
     if (!confirm('Reseed database menu inventory to full default stock?')) return;
     try {
-      const res = await fetch('/api/reset', { method: 'POST' });
+      const res = await apiFetch('/api/reset', { method: 'POST' });
       const data = await res.json();
       alert(data.message);
       fetchMenu();

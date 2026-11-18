@@ -187,8 +187,9 @@ def reset_database():
     return {"status": "ok", "message": "Menu database re-seeded successfully."}
 
 
-# Mount API router both under /api and root to support Vercel rewrite patterns and direct requests
+# Mount API router under /api, /api/index.py, and root to support all Vercel rewrite patterns and direct requests
 app.include_router(router, prefix="/api")
+app.include_router(router, prefix="/api/index.py")
 app.include_router(router)
 
 # Mount static directory for frontend (serves public or static folder)
