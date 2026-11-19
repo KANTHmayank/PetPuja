@@ -270,7 +270,7 @@ html, body {
 /* Layout Grid */
 .main-layout {
   display: grid;
-  grid-template-columns: 320px 1fr 370px;
+  grid-template-columns: 410px 1fr 370px;
   gap: 16px;
   flex: 1;
   min-height: 0; /* Important for inner scrolling */
@@ -476,26 +476,79 @@ html, body {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
+}
+
+/* Organized Section Headers */
+.menu-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 4px 6px 4px;
+  margin-top: 14px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.menu-section-header:first-child {
+  margin-top: 4px;
+}
+
+.menu-section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-section-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.menu-section-title {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--accent-turmeric);
+  letter-spacing: -0.01em;
+}
+
+.menu-section-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.section-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
 .menu-item-card {
   display: flex;
   flex-direction: column;
-  padding: 12px 14px;
+  flex-shrink: 0; /* CRITICAL: Never squish cards vertically! */
+  padding: 14px 16px;
   background: var(--bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
-  overflow: hidden;
+  position: relative;
 }
 
 .menu-item-card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-active);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 12px rgba(245, 158, 11, 0.15);
 }
 
 .menu-item-card.out-of-stock {
@@ -505,8 +558,9 @@ html, body {
 /* Card Main Flex Layout (Text on left, Image on right) */
 .item-card-main {
   display: flex;
-  gap: 12px;
-  align-items: stretch;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
 .item-info-col {
@@ -517,14 +571,16 @@ html, body {
 }
 
 .item-media-col {
-  width: 82px;
-  height: 82px;
+  width: 92px;
+  height: 92px;
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   position: relative;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  margin-top: 2px;
 }
 
 .item-dish-img {
@@ -542,15 +598,15 @@ html, body {
 .item-top-row {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 4px;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 
 .item-title-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
@@ -670,16 +726,45 @@ html, body {
 }
 
 .item-desc {
-  font-size: 0.77rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
-  margin-bottom: 8px;
-  line-height: 1.35;
+  margin-bottom: 10px;
+  line-height: 1.45;
 }
 
 .item-bottom-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: auto;
+}
+
+.menu-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+}
+
+.menu-empty-state .empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.menu-empty-state h4 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.menu-empty-state p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
 .item-meta-group {
@@ -1448,7 +1533,7 @@ html, body {
     gap: 10px;
   }
   .main-layout {
-    grid-template-columns: 270px 1fr 310px;
+    grid-template-columns: 360px 1fr 320px;
     gap: 12px;
   }
   .app-header {

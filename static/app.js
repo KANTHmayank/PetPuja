@@ -158,6 +158,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const SECTIONS = [
+    { key: 'starter', title: 'Starters & Appetizers', icon: '🥟' },
+    { key: 'main', title: 'Mains & Royal Curries', icon: '🍲' },
+    { key: 'dessert', title: 'Desserts & Mithai', icon: '🍨' },
+    { key: 'bar', title: 'Bar, Cocktails & Spirits', icon: '🍸' },
+    { key: 'drink', title: 'Beverages & Refreshers', icon: '☕' }
+  ];
+
   function renderMenu() {
     const searchTerm = menuSearchInput.value.toLowerCase().trim();
     const filtered = menuData.filter(item => {
@@ -174,7 +182,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (filtered.length === 0) {
-      menuItemsList.innerHTML = `<div class="tracker-idle-view" style="padding: 20px;"><p>No dishes found matching your criteria.</p></div>`;
+      menuItemsList.innerHTML = `
+        <div class="menu-empty-state">
+          <div class="empty-icon">🍽️</div>
+          <h4>No matching dishes found</h4>
+          <p>Try clearing filters or search for something else!</p>
+        </div>`;
       return;
     }
 
@@ -186,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'drink': '☕ Drink'
     };
 
-    menuItemsList.innerHTML = filtered.map(item => {
+    function buildCardHtml(item) {
       let stockClass = 'in-stock';
       let stockText = `${item.stock} in stock`;
       let isOutOfStock = false;
@@ -256,7 +269,44 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
       `;
-    }).join('');
+    }
+
+    // Render grouped sections
+    if (currentCategory !== 'all') {
+      const activeSec = SECTIONS.find(s => s.key === currentCategory) || { title: currentCategory.toUpperCase(), icon: '🍽️' };
+      menuItemsList.innerHTML = `
+        <div class="menu-section-header">
+          <div class="menu-section-title-wrap">
+            <span class="menu-section-icon">${activeSec.icon}</span>
+            <h3 class="menu-section-title">${activeSec.title}</h3>
+          </div>
+          <span class="menu-section-badge">${filtered.length} dishes</span>
+        </div>
+        <div class="section-cards-list">
+          ${filtered.map(buildCardHtml).join('')}
+        </div>
+      `;
+    } else {
+      let sectionsHtml = '';
+      SECTIONS.forEach(sec => {
+        const sectionItems = filtered.filter(item => item.category === sec.key);
+        if (sectionItems.length > 0) {
+          sectionsHtml += `
+            <div class="menu-section-header">
+              <div class="menu-section-title-wrap">
+                <span class="menu-section-icon">${sec.icon}</span>
+                <h3 class="menu-section-title">${sec.title}</h3>
+              </div>
+              <span class="menu-section-badge">${sectionItems.length} dishes</span>
+            </div>
+            <div class="section-cards-list">
+              ${sectionItems.map(buildCardHtml).join('')}
+            </div>
+          `;
+        }
+      });
+      menuItemsList.innerHTML = sectionsHtml;
+    }
 
     // Attach click listeners
     document.querySelectorAll('.menu-item-card').forEach(card => {
