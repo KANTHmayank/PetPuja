@@ -48,6 +48,54 @@ document.addEventListener('DOMContentLoaded', () => {
   const conn3 = document.getElementById('conn3');
   const conn4 = document.getElementById('conn4');
 
+  // Mobile Navigation Elements
+  const mobileNavBar = document.getElementById('mobileNavBar');
+  const mobileTabChat = document.getElementById('mobileTabChat');
+  const mobileTabMenu = document.getElementById('mobileTabMenu');
+  const mobileTabTracker = document.getElementById('mobileTabTracker');
+  const menuMobileBadge = document.getElementById('menuMobileBadge');
+  const trackerMobileBadge = document.getElementById('trackerMobileBadge');
+  const menuPanel = document.getElementById('menuPanel');
+  const chatPanel = document.getElementById('chatPanel');
+  const trackerPanel = document.getElementById('trackerPanel');
+
+  function switchMobileTab(targetPanelId) {
+    const panels = [menuPanel, chatPanel, trackerPanel];
+    const navBtns = [mobileTabChat, mobileTabMenu, mobileTabTracker];
+    
+    panels.forEach(p => {
+      if (!p) return;
+      if (p.id === targetPanelId) {
+        p.classList.add('active-panel');
+      } else {
+        p.classList.remove('active-panel');
+      }
+    });
+
+    navBtns.forEach(btn => {
+      if (!btn) return;
+      const isTarget = btn.getAttribute('data-target') === targetPanelId;
+      btn.classList.toggle('active', isTarget);
+      btn.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+    });
+
+    if (targetPanelId === 'chatPanel') {
+      setTimeout(() => {
+        chatMessagesStream.scrollTop = chatMessagesStream.scrollHeight;
+      }, 50);
+    }
+  }
+
+  if (mobileNavBar) {
+    mobileNavBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.mobile-nav-btn');
+      if (btn) {
+        const targetId = btn.getAttribute('data-target');
+        switchMobileTab(targetId);
+      }
+    });
+  }
+
   // State
   let menuData = [];
   let currentCategory = 'all';
@@ -88,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.ok) throw new Error('Failed to load menu');
       menuData = await res.json();
       menuCountBadge.textContent = `${menuData.length} Items`;
+      if (menuMobileBadge) menuMobileBadge.textContent = menuData.length;
       renderMenu();
     } catch (err) {
       menuItemsList.innerHTML = `<div class="error-message">Could not load menu: ${err.message}</div>`;
@@ -155,6 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
       card.addEventListener('click', () => {
         const name = card.getAttribute('data-item-name');
         chatInput.value = `Can you tell me about the ${name}?`;
+        if (window.innerWidth <= 900) {
+          switchMobileTab('chatPanel');
+        }
         chatInput.focus();
       });
     });
@@ -338,6 +390,11 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStepper('confirm');
     orderStateBadge.textContent = 'Needs Confirmation';
 
+    if (trackerMobileBadge) {
+      trackerMobileBadge.style.display = 'inline-flex';
+      trackerMobileBadge.textContent = '!';
+    }
+
     const items = data.state?.items || [];
     const validItems = items.filter(i => i.menu_status === 'valid');
     const total = data.state?.total_bill || 0;
@@ -362,6 +419,25 @@ document.addEventListener('DOMContentLoaded', () => {
       : "I have put together your order summary in the Kitchen Tracker. Please confirm if everything looks good to fire up the kitchen!";
 
     appendMessage('Agent', pairingMessage, false);
+
+    // On mobile screens, add an action shortcut button right in the chat message
+    if (window.innerWidth <= 900) {
+      const lastMsg = chatMessagesStream.lastElementChild;
+      if (lastMsg && lastMsg.querySelector('.msg-body')) {
+        const actionWrap = document.createElement('div');
+        actionWrap.className = 'mobile-action-shortcut';
+        actionWrap.innerHTML = `
+          <button type="button" class="btn btn-primary" id="mobileGoToConfirmBtn">
+            📋 Review & Confirm Order in Tracker ($${total.toFixed(2)}) →
+          </button>
+        `;
+        actionWrap.querySelector('#mobileGoToConfirmBtn').addEventListener('click', () => {
+          switchMobileTab('trackerPanel');
+        });
+        lastMsg.querySelector('.msg-body').appendChild(actionWrap);
+        chatMessagesStream.scrollTop = chatMessagesStream.scrollHeight;
+      }
+    }
   }
 
   // Confirm Buttons
@@ -380,6 +456,15 @@ document.addEventListener('DOMContentLoaded', () => {
       updateStepper('cook');
       orderStateBadge.textContent = 'In Kitchen';
       kitchenLiveBoard.style.display = 'flex';
+      if (trackerMobileBadge) {
+        trackerMobileBadge.style.display = 'inline-flex';
+        trackerMobileBadge.textContent = '🍳';
+      }
+    } else {
+      if (trackerMobileBadge) {
+        trackerMobileBadge.style.display = 'none';
+        trackerMobileBadge.textContent = '•';
+      }
     }
 
     try {
@@ -469,6 +554,11 @@ document.addEventListener('DOMContentLoaded', () => {
       trackerIdleView.style.display = 'none';
       thermalReceipt.style.display = 'flex';
 
+      if (trackerMobileBadge) {
+        trackerMobileBadge.style.display = 'inline-flex';
+        trackerMobileBadge.textContent = '🧾';
+      }
+
       const now = new Date();
       receiptTimestamp.textContent = `Date: ${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Bill #${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -496,9 +586,32 @@ document.addEventListener('DOMContentLoaded', () => {
         ? state.total_bill 
         : served.reduce((acc, i) => acc + (i.qty * i.price), 0);
       receiptGrandTotal.textContent = `$${grandTotal.toFixed(2)}`;
+
+      // Add receipt shortcut button to chat bubble on mobile
+      if (window.innerWidth <= 900) {
+        const lastMsg = chatMessagesStream.lastElementChild;
+        if (lastMsg && lastMsg.querySelector('.msg-body')) {
+          const receiptWrap = document.createElement('div');
+          receiptWrap.className = 'mobile-action-shortcut';
+          receiptWrap.innerHTML = `
+            <button type="button" class="btn btn-subtle" id="mobileGoToReceiptBtn">
+              🧾 View Thermal Receipt in Tracker →
+            </button>
+          `;
+          receiptWrap.querySelector('#mobileGoToReceiptBtn').addEventListener('click', () => {
+            switchMobileTab('trackerPanel');
+          });
+          lastMsg.querySelector('.msg-body').appendChild(receiptWrap);
+          chatMessagesStream.scrollTop = chatMessagesStream.scrollHeight;
+        }
+      }
     } else if (state.order_status === 'unsuccessful') {
       orderStateBadge.textContent = 'Order Failed / Cancelled';
       confirmationCard.style.display = 'none';
+      if (trackerMobileBadge) {
+        trackerMobileBadge.style.display = 'none';
+        trackerMobileBadge.textContent = '•';
+      }
     }
   }
 
@@ -543,6 +656,13 @@ document.addEventListener('DOMContentLoaded', () => {
     kitchenLiveBoard.style.display = 'none';
     thermalReceipt.style.display = 'none';
     trackerIdleView.style.display = 'flex';
+    if (trackerMobileBadge) {
+      trackerMobileBadge.style.display = 'none';
+      trackerMobileBadge.textContent = '•';
+    }
+    if (window.innerWidth <= 900) {
+      switchMobileTab('chatPanel');
+    }
   });
 
   // Initial Load

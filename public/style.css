@@ -61,11 +61,15 @@
 
 html, body {
   height: 100%;
+  height: 100dvh;
+  width: 100%;
+  max-width: 100%;
   background-color: var(--bg-black);
   color: var(--text-primary);
   font-family: var(--font-body);
   overflow: hidden;
   line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* Ambient Glow Background Orbs */
@@ -73,6 +77,8 @@ html, body {
   position: fixed;
   border-radius: 50%;
   pointer-events: none;
+  max-width: 100vw;
+  max-height: 100vh;
   z-index: 0;
   filter: blur(110px);
   opacity: 0.14;
@@ -101,8 +107,29 @@ html, body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   padding: 16px 20px;
   gap: 14px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Mobile Nav Bar (Hidden by default on desktop) */
+.mobile-nav-bar {
+  display: none;
+}
+
+/* Mobile Action Shortcut */
+.mobile-action-shortcut {
+  margin-top: 10px;
+  display: flex;
+}
+
+.mobile-action-shortcut .btn {
+  width: 100%;
+  font-size: 0.84rem;
+  padding: 9px 14px;
 }
 
 /* App Header */
@@ -1210,25 +1237,438 @@ html, body {
   background: #0f172a;
 }
 
-/* Responsive adjustments */
-@media (max-width: 1100px) {
+/* ==========================================================================
+   Responsive Design System
+   ========================================================================== */
+
+/* Tablet & Intermediate Desktop (901px - 1180px) */
+@media (max-width: 1180px) and (min-width: 901px) {
+  .app-container {
+    padding: 12px 14px;
+    gap: 10px;
+  }
   .main-layout {
-    grid-template-columns: 280px 1fr 320px;
+    grid-template-columns: 270px 1fr 310px;
+    gap: 12px;
+  }
+  .app-header {
+    padding: 8px 14px;
+  }
+  .brand-name {
+    font-size: 1.45rem;
+  }
+  .brand-tagline {
+    font-size: 0.72rem;
   }
 }
 
+/* Mobile & Small Tablet Viewport (<= 900px) */
 @media (max-width: 900px) {
   html, body {
-    overflow: auto;
-    height: auto;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
   }
+
   .app-container {
-    height: auto;
+    height: 100%;
+    height: 100dvh;
+    padding: 8px 10px;
+    gap: 8px;
+    box-sizing: border-box;
   }
+
+  /* App Header Compact */
+  .app-header {
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+
+  .brand-block {
+    gap: 10px;
+  }
+
+  .brand-icon {
+    font-size: 1.7rem;
+  }
+
+  .brand-name {
+    font-size: 1.35rem;
+  }
+
+  .brand-devanagari {
+    font-size: 0.95rem;
+  }
+
+  .brand-tagline {
+    display: none; /* Hide to prevent vertical bloat and awkward wrapping */
+  }
+
+  .header-status-panel {
+    gap: 6px;
+  }
+
+  .status-model-text {
+    display: none; /* Hide long model name on mobile */
+  }
+
+  .status-indicator-badge {
+    padding: 5px 10px;
+    font-size: 0.74rem;
+  }
+
+  .btn-subtle {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+
+  /* Mobile Segmented Navigation Bar */
+  .mobile-nav-bar {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 6px;
+    padding: 4px;
+    background: var(--bg-surface);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+  }
+
+  .mobile-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    min-height: 38px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-nav-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .mobile-nav-btn.active {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(225, 29, 72, 0.15) 100%);
+    border-color: var(--border-active);
+    color: var(--accent-turmeric);
+    font-weight: 700;
+    box-shadow: 0 2px 10px var(--accent-saffron-glow);
+  }
+
+  .mobile-nav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    min-width: 18px;
+    line-height: 1.2;
+  }
+
+  .mobile-nav-btn.active .mobile-nav-badge {
+    background: var(--accent-saffron);
+    color: #000000;
+  }
+
+  .mobile-nav-badge.pulse {
+    background: var(--accent-tandoori);
+    color: #ffffff;
+    animation: pulse-ring 1.5s infinite;
+  }
+
+  /* Main Layout & Tab Panels */
   .main-layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 0;
+    overflow: hidden;
   }
+
+  .main-layout .panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    border-radius: var(--radius-md);
+  }
+
+  .main-layout .panel.active-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Menu Panel on Mobile */
+  .panel-header {
+    padding: 10px 14px;
+  }
+
+  .category-tabs-container {
+    padding: 8px 10px;
+    gap: 5px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tab-btn {
+    padding: 6px 11px;
+    font-size: 0.74rem;
+  }
+
+  .menu-search-wrap {
+    padding: 8px 10px;
+  }
+
+  .menu-search-input {
+    font-size: 16px; /* Prevents iOS Safari auto-zoom */
+    padding: 8px 12px 8px 30px;
+  }
+
+  .menu-items-scroll {
+    padding: 10px;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .menu-item-card {
+    padding: 10px 12px;
+  }
+
+  .menu-item-card:active {
+    transform: scale(0.99);
+    background: var(--bg-card-hover);
+  }
+
+  .item-name {
+    font-size: 0.9rem;
+  }
+
+  .item-price {
+    font-size: 0.9rem;
+  }
+
+  .item-desc {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+
+  /* Chat Panel on Mobile */
+  .chat-header {
+    padding: 8px 12px;
+  }
+
+  .host-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 1.15rem;
+  }
+
+  .host-name {
+    font-size: 0.95rem;
+  }
+
+  .host-subtitle {
+    font-size: 0.68rem;
+  }
+
+  .active-turn-pill {
+    font-size: 0.68rem;
+    padding: 3px 8px;
+  }
+
   .chat-messages-stream {
-    max-height: 500px;
+    flex: 1;
+    min-height: 0;
+    max-height: none; /* Let flex container govern height */
+    padding: 12px 10px;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .message-bubble {
+    max-width: 92%;
+    gap: 8px;
+  }
+
+  .msg-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.95rem;
+  }
+
+  .msg-text {
+    padding: 10px 13px;
+    font-size: 0.85rem;
+  }
+
+  .quick-chips-bar {
+    padding: 6px 10px;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .chip-btn {
+    font-size: 0.72rem;
+    padding: 5px 9px;
+    min-height: 30px;
+  }
+
+  .chat-input-form {
+    padding: 8px 10px;
+  }
+
+  .chat-input {
+    font-size: 16px; /* Prevents iOS Safari auto-zoom */
+    padding: 9px 12px;
+  }
+
+  .send-btn {
+    padding: 9px 14px;
+    font-size: 0.82rem;
+  }
+
+  /* Tracker Panel on Mobile */
+  .workflow-stepper {
+    padding: 10px 12px;
+  }
+
+  .step-circle {
+    width: 20px;
+    height: 20px;
+    font-size: 0.64rem;
+  }
+
+  .step-text {
+    font-size: 0.58rem;
+    letter-spacing: 0.02em;
+  }
+
+  .step-connector {
+    margin: 0 2px 8px 2px;
+    height: 2px;
+  }
+
+  .tracker-content-area {
+    padding: 12px 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .confirmation-card {
+    padding: 12px;
+  }
+
+  .thermal-receipt {
+    margin: 0 auto;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .receipt-body {
+    padding: 14px 12px;
+  }
+
+  .receipt-table-header,
+  .receipt-row {
+    grid-template-columns: 2fr 0.8fr 1.1fr 1.1fr;
+    font-size: 0.72rem;
+  }
+}
+
+/* Extra Small Phones (<= 480px, e.g. iPhone SE, 360px - 414px Androids) */
+@media (max-width: 480px) {
+  .app-container {
+    padding: 5px 6px;
+    gap: 6px;
+  }
+
+  .app-header {
+    padding: 6px 10px;
+  }
+
+  .brand-icon {
+    font-size: 1.45rem;
+  }
+
+  .brand-name {
+    font-size: 1.18rem;
+  }
+
+  .brand-devanagari {
+    font-size: 0.82rem;
+  }
+
+  .header-status-panel .btn-text {
+    display: none; /* Icon-only buttons on small phones */
+  }
+
+  .header-status-panel .btn {
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+  }
+
+  .status-indicator-badge {
+    padding: 4px 8px;
+    font-size: 0.68rem;
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .mobile-nav-btn {
+    padding: 6px 3px;
+    font-size: 0.75rem;
+    gap: 3px;
+  }
+
+  .mobile-nav-icon {
+    font-size: 0.95rem;
+  }
+
+  .mobile-nav-badge {
+    font-size: 0.62rem;
+    padding: 0 4px;
+    min-width: 15px;
+  }
+
+  .step-text {
+    font-size: 0.52rem;
+  }
+
+  .receipt-table-header,
+  .receipt-row {
+    font-size: 0.68rem;
+  }
+}
+
+/* Ensure desktop remains 3-column above 900px */
+@media (min-width: 901px) {
+  .main-layout .panel {
+    display: flex !important;
+  }
+  .mobile-nav-bar {
+    display: none !important;
   }
 }

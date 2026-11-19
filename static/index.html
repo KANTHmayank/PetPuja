@@ -31,16 +31,34 @@
       <div class="header-status-panel">
         <div class="status-indicator-badge online" id="serverStatusBadge">
           <span class="pulse-dot"></span>
-          <span class="status-label">Kitchen Live • Groq GPT-OSS-20B</span>
+          <span class="status-label"><span class="status-live-text">Kitchen Live</span><span class="status-model-text"> • Groq GPT-OSS-20B</span></span>
         </div>
         <button class="btn btn-subtle" id="resetDbBtn" title="Reset and reseed database inventory">
-          <span class="btn-icon">🔄</span> Reseed Menu
+          <span class="btn-icon">🔄</span><span class="btn-text"> Reseed Menu</span>
         </button>
         <button class="btn btn-subtle" id="clearChatBtn" title="Start a fresh chat thread">
-          <span class="btn-icon">✨</span> New Thread
+          <span class="btn-icon">✨</span><span class="btn-text"> New Thread</span>
         </button>
       </div>
     </header>
+
+    <!-- Mobile View Switcher (Visible on mobile/tablet <= 900px) -->
+    <nav class="mobile-nav-bar" id="mobileNavBar" aria-label="Mobile Navigation">
+      <button class="mobile-nav-btn active" id="mobileTabChat" data-target="chatPanel" aria-selected="true" role="tab">
+        <span class="mobile-nav-icon">💬</span>
+        <span class="mobile-nav-label">Host Chat</span>
+      </button>
+      <button class="mobile-nav-btn" id="mobileTabMenu" data-target="menuPanel" aria-selected="false" role="tab">
+        <span class="mobile-nav-icon">📜</span>
+        <span class="mobile-nav-label">Menu</span>
+        <span class="mobile-nav-badge" id="menuMobileBadge">37</span>
+      </button>
+      <button class="mobile-nav-btn" id="mobileTabTracker" data-target="trackerPanel" aria-selected="false" role="tab">
+        <span class="mobile-nav-icon">🔥</span>
+        <span class="mobile-nav-label">Tracker</span>
+        <span class="mobile-nav-badge pulse" id="trackerMobileBadge" style="display: none;">•</span>
+      </button>
+    </nav>
 
     <!-- Main 3-Column Layout -->
     <main class="main-layout" id="mainLayout">
@@ -79,7 +97,7 @@
       </section>
 
       <!-- Center Column: Conversational AI Host Chat -->
-      <section class="panel chat-panel" id="chatPanel" aria-label="AI Dining Host Chat">
+      <section class="panel chat-panel active-panel" id="chatPanel" aria-label="AI Dining Host Chat">
         <div class="panel-header chat-header">
           <div class="host-profile">
             <div class="host-avatar">👨‍🍳</div>
