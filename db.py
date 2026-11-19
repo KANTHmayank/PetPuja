@@ -30,55 +30,54 @@ if os.environ.get("VERCEL") or not os.access(BASE_DIR, os.W_OK):
 else:
     DB_PATH = os.path.join(BASE_DIR, "restaurant.db")
 
-# (name, category, price, stock, description)
-# (name, category, price, stock, description)
+# (name, category, price, stock, description, image_url, is_veg, spice_level, alcohol_pct, rating, rating_count)
 SEED_MENU = [
     # Starters (चटपटे स्टार्टर्स)
-    ("samosa", "starter", 4.00, 15, "crispy golden pastry filled with spiced potatoes, peas, served with mint & tamarind chutney (2 pcs)"),
-    ("chicken tikka", "starter", 8.50, 14, "smoky tandoor-roasted chicken chunks marinated in hung curd, ginger-garlic, and kashmiri spices"),
-    ("paneer tikka", "starter", 7.50, 12, "char-grilled cottage cheese cubes with bell peppers, onions, and tangy mint dip"),
-    ("veg chowmein", "starter", 6.50, 16, "desi street-style wok-tossed noodles with shredded cabbage, carrots, bell peppers, and chili soy"),
-    ("chicken chowmein", "starter", 8.00, 12, "wok-fried noodles with tender chicken strips, egg, spring onions, and garlic chili glaze"),
-    ("dahi ke kabab", "starter", 7.00, 8, "melt-in-mouth spiced hung curd patties with a golden crispy crust, served with green chutney"),
-    ("chicken wings", "starter", 7.50, 15, "crispy tandoori wings tossed in spicy-sweet house masala glaze"),
-    ("spring rolls", "starter", 5.50, 10, "crispy vegetable spring rolls with sweet chili garlic dip"),
-    ("garlic bread", "starter", 4.50, 12, "toasted herb baguette with warm garlic butter"),
+    ("samosa", "starter", 60.0, 15, "crispy golden pastry filled with spiced potatoes, peas, served with mint & tamarind chutney (2 pcs)", "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=400&q=80", 1, "Medium", None, 4.8, 340),
+    ("chicken tikka", "starter", 280.0, 14, "smoky tandoor-roasted chicken chunks marinated in hung curd, ginger-garlic, and kashmiri spices", "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=400&q=80", 0, "Medium", None, 4.9, 420),
+    ("paneer tikka", "starter", 240.0, 12, "char-grilled cottage cheese cubes with bell peppers, onions, and tangy mint dip", "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=400&q=80", 1, "Medium", None, 4.7, 280),
+    ("veg chowmein", "starter", 160.0, 16, "desi street-style wok-tossed noodles with shredded cabbage, carrots, bell peppers, and chili soy", "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=400&q=80", 1, "Medium", None, 4.5, 190),
+    ("chicken chowmein", "starter", 210.0, 12, "wok-fried noodles with tender chicken strips, egg, spring onions, and garlic chili glaze", "https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=400&q=80", 0, "Hot", None, 4.6, 210),
+    ("dahi ke kabab", "starter", 220.0, 8, "melt-in-mouth spiced hung curd patties with a golden crispy crust, served with green chutney", "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&fit=crop&w=400&q=80", 1, "Mild", None, 4.7, 150),
+    ("chicken wings", "starter", 260.0, 15, "crispy tandoori wings tossed in spicy-sweet house masala glaze", "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?auto=format&fit=crop&w=400&q=80", 0, "Hot", None, 4.8, 260),
+    ("spring rolls", "starter", 150.0, 10, "crispy vegetable spring rolls with sweet chili garlic dip", "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80", 1, "Mild", None, 4.5, 140),
+    ("garlic bread", "starter", 140.0, 12, "toasted herb baguette with warm garlic butter", "https://images.unsplash.com/photo-1619535860434-ba1d8fa12536?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.4, 120),
 
     # Mains (मुख्य भोजन)
-    ("butter chicken", "main", 12.50, 10, "tandoori chicken pieces simmered in rich, velvety tomato, cream, and cashew butter gravy"),
-    ("paneer butter masala", "main", 11.00, 12, "fresh cottage cheese cubes bathed in silky aromatic tomato butter gravy"),
-    ("dal makhani", "main", 9.50, 14, "slow-cooked black lentils simmered overnight with butter, cream, and subtle fenugreek"),
-    ("chicken biryani", "main", 13.00, 10, "royal dum-cooked basmati rice layered with marinated chicken, saffron, browned onions, served with mint raita"),
-    ("veg dum biryani", "main", 10.50, 8, "fragrant saffron basmati rice layered with garden vegetables, mint, and fried onions with raita"),
-    ("rogan josh", "main", 14.50, 0, "slow-braised kashmiri tender lamb shank with aromatic spices [chef specialty, out of stock today]"),
-    ("garlic naan", "main", 3.50, 30, "freshly baked clay oven flatbread brushed with garlic butter and fresh coriander"),
-    ("butter naan", "main", 3.00, 35, "soft, pillowy tandoori flatbread topped with melting desi butter"),
-    ("burger", "main", 8.50, 8, "juicy grilled patty with cheddar, crisp lettuce, and spicy tandoori mayo"),
-    ("margherita pizza", "main", 9.50, 6, "stone-baked pizza with rich tomato sauce, fresh mozzarella, and basil"),
-    ("pepperoni pizza", "main", 10.50, 6, "classic crisp crust pizza with spicy pepperoni and bubbling mozzarella"),
+    ("butter chicken", "main", 380.0, 10, "tandoori chicken pieces simmered in rich, velvety tomato, cream, and cashew butter gravy", "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=400&q=80", 0, "Mild", None, 4.9, 680),
+    ("paneer butter masala", "main", 320.0, 12, "fresh cottage cheese cubes bathed in silky aromatic tomato butter gravy", "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=400&q=80", 1, "Mild", None, 4.8, 510),
+    ("dal makhani", "main", 260.0, 14, "slow-cooked black lentils simmered overnight with butter, cream, and subtle fenugreek", "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=400&q=80", 1, "Mild", None, 4.9, 590),
+    ("chicken biryani", "main", 340.0, 10, "royal dum-cooked basmati rice layered with marinated chicken, saffron, browned onions, served with mint raita", "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=400&q=80", 0, "Medium", None, 4.9, 620),
+    ("veg dum biryani", "main", 260.0, 8, "fragrant saffron basmati rice layered with garden vegetables, mint, and fried onions with raita", "https://images.unsplash.com/photo-1642821373181-696a54913e9a?auto=format&fit=crop&w=400&q=80", 1, "Medium", None, 4.7, 310),
+    ("rogan josh", "main", 440.0, 0, "slow-braised kashmiri tender lamb shank with aromatic spices [chef specialty, out of stock today]", "https://images.unsplash.com/photo-1545247181-516773cae754?auto=format&fit=crop&w=400&q=80", 0, "Hot", None, 4.8, 240),
+    ("garlic naan", "main", 60.0, 30, "freshly baked clay oven flatbread brushed with garlic butter and fresh coriander", "https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.8, 450),
+    ("butter naan", "main", 50.0, 35, "soft, pillowy tandoori flatbread topped with melting desi butter", "https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.7, 380),
+    ("burger", "main", 180.0, 8, "juicy grilled patty with cheddar, crisp lettuce, and spicy tandoori mayo", "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80", 0, "Medium", None, 4.5, 170),
+    ("margherita pizza", "main", 280.0, 6, "stone-baked pizza with rich tomato sauce, fresh mozzarella, and basil", "https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.6, 220),
+    ("pepperoni pizza", "main", 360.0, 6, "classic crisp crust pizza with spicy pepperoni and bubbling mozzarella", "https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=400&q=80", 0, "Medium", None, 4.7, 195),
 
     # Desserts (मीठा और मिष्ठान)
-    ("gulab jamun", "dessert", 4.50, 15, "warm golden milk dumplings soaked in fragrant rose and cardamom syrup (2 pcs)"),
-    ("rasmalai", "dessert", 5.50, 12, "soft spongy cottage cheese patties steeped in thickened saffron-pistachio milk (2 pcs)"),
-    ("chocolate brownie", "dessert", 4.50, 10, "fudgy warm walnut brownie served with a scoop of vanilla ice cream"),
-    ("kheer", "dessert", 4.00, 8, "traditional rice pudding slow-simmered with milk, cardamom, almonds, and saffron"),
-    ("ice cream sundae", "dessert", 4.50, 14, "three scoops of rich ice cream with chocolate sauce and roasted nuts"),
+    ("gulab jamun", "dessert", 80.0, 15, "warm golden milk dumplings soaked in fragrant rose and cardamom syrup (2 pcs)", "https://images.unsplash.com/photo-1667191167440-e22295556272?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.9, 390),
+    ("rasmalai", "dessert", 120.0, 12, "soft spongy cottage cheese patties steeped in thickened saffron-pistachio milk (2 pcs)", "https://images.unsplash.com/photo-1605197150742-df2168926978?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.9, 410),
+    ("chocolate brownie", "dessert", 160.0, 10, "fudgy warm walnut brownie served with a scoop of vanilla ice cream", "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.7, 230),
+    ("kheer", "dessert", 90.0, 8, "traditional rice pudding slow-simmered with milk, cardamom, almonds, and saffron", "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.8, 180),
+    ("ice cream sundae", "dessert", 140.0, 14, "three scoops of rich ice cream with chocolate sauce and roasted nuts", "https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.6, 160),
 
     # Bar & Spirits (बार और कॉकटेल)
-    ("liit", "bar", 12.00, 15, "long island iced tea: gin, vodka, white rum, tequila, triple sec, lemon juice, splash of cola"),
-    ("whiskey", "bar", 10.00, 20, "premium scotch / single malt (60ml) served neat, with ice, or splash of water"),
-    ("beer", "bar", 6.50, 30, "chilled pint of premium lager (Kingfisher Ultra / Bira 91 White)"),
-    ("old fashioned", "bar", 11.00, 12, "bourbon whiskey gently stirred with angostura bitters, orange peel, and cane sugar"),
-    ("mojito", "bar", 8.50, 18, "white rum crushed with fresh mint, lime juice, brown sugar, and sparkling soda"),
-    ("spicy guava cocktail", "bar", 9.50, 14, "vodka spiked with pink guava juice, tabasco dash, and roasted black salt rim"),
+    ("liit", "bar", 380.0, 15, "long island iced tea: gin, vodka, white rum, tequila, triple sec, lemon juice, splash of cola", "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=400&q=80", 1, None, 22.0, 4.9, 350),
+    ("whiskey", "bar", 320.0, 20, "premium scotch / single malt (60ml) served neat, with ice, or splash of water", "https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=400&q=80", 1, None, 42.8, 4.8, 290),
+    ("beer", "bar", 220.0, 30, "chilled pint of premium lager (Kingfisher Ultra / Bira 91 White)", "https://images.unsplash.com/photo-1608270546103-979a4a754167?auto=format&fit=crop&w=400&q=80", 1, None, 5.0, 4.7, 440),
+    ("old fashioned", "bar", 360.0, 12, "bourbon whiskey gently stirred with angostura bitters, orange peel, and cane sugar", "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=400&q=80", 1, None, 32.0, 4.8, 180),
+    ("mojito", "bar", 240.0, 18, "white rum crushed with fresh mint, lime juice, brown sugar, and sparkling soda", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=400&q=80", 1, None, 10.0, 4.7, 270),
+    ("spicy guava cocktail", "bar", 260.0, 14, "vodka spiked with pink guava juice, tabasco dash, and roasted black salt rim", "https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=400&q=80", 1, None, 12.0, 4.8, 220),
 
     # Drinks & Refreshers (पेय पदार्थ)
-    ("mango lassi", "drink", 4.00, 20, "thick creamy chilled yogurt smoothie blended with alphonso mango and green cardamom"),
-    ("masala chai", "drink", 3.00, 25, "freshly brewed spiced assam tea with crushed ginger, cardamom, and milk"),
-    ("nimbu soda", "drink", 3.00, 20, "fresh lime sparkling soda with roasted cumin, mint, and black salt (sweet or salted)"),
-    ("iced tea", "drink", 3.50, 16, "chilled black tea with fresh lemon slices and mint sprig"),
-    ("coffee", "drink", 3.50, 20, "south indian style frothy filter coffee or classic espresso"),
-    ("coke", "drink", 2.50, 30, "classic 330ml chilled can"),
+    ("mango lassi", "drink", 110.0, 20, "thick creamy chilled yogurt smoothie blended with alphonso mango and green cardamom", "https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.9, 510),
+    ("masala chai", "drink", 50.0, 25, "freshly brewed spiced assam tea with crushed ginger, cardamom, and milk", "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.9, 640),
+    ("nimbu soda", "drink", 60.0, 20, "fresh lime sparkling soda with roasted cumin, mint, and black salt (sweet or salted)", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.6, 190),
+    ("iced tea", "drink", 90.0, 16, "chilled black tea with fresh lemon slices and mint sprig", "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.5, 150),
+    ("coffee", "drink", 80.0, 20, "south indian style frothy filter coffee or classic espresso", "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.6, 210),
+    ("coke", "drink", 40.0, 30, "classic 330ml chilled can", "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=400&q=80", 1, None, None, 4.5, 280),
 ]
 
 CATEGORY_ORDER = ["starter", "main", "dessert", "bar", "drink"]
@@ -102,6 +101,16 @@ def init_db(reset: bool = False) -> None:
     with _connect() as conn:
         if reset:
             conn.execute("DROP TABLE IF EXISTS menu_items")
+
+        # Check if table exists and has new schema columns
+        table_exists = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='menu_items'"
+        ).fetchone()
+        if table_exists:
+            cols = [c[1] for c in conn.execute("PRAGMA table_info(menu_items)").fetchall()]
+            if "image_url" not in cols or "rating" not in cols:
+                conn.execute("DROP TABLE IF EXISTS menu_items")
+
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS menu_items (
@@ -110,15 +119,21 @@ def init_db(reset: bool = False) -> None:
                 category TEXT NOT NULL,
                 price REAL NOT NULL,
                 stock INTEGER NOT NULL,
-                description TEXT
+                description TEXT,
+                image_url TEXT,
+                is_veg INTEGER DEFAULT 1,
+                spice_level TEXT,
+                alcohol_pct REAL,
+                rating REAL DEFAULT 4.5,
+                rating_count INTEGER DEFAULT 100
             )
             """
         )
         (count,) = conn.execute("SELECT COUNT(*) FROM menu_items").fetchone()
         if count == 0:
             conn.executemany(
-                "INSERT INTO menu_items (name, category, price, stock, description) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO menu_items (name, category, price, stock, description, image_url, is_veg, spice_level, alcohol_pct, rating, rating_count) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 SEED_MENU,
             )
 
@@ -258,7 +273,7 @@ def format_menu_text() -> str:
         lines.append(f"\n{category.capitalize()}s:")
         for r in items:
             stock_note = f"{r['stock']} left" if r["stock"] > 0 else "out of stock"
-            lines.append(f"  - {r['name']} (${r['price']:.2f}) — {r['description']} [{stock_note}]")
+            lines.append(f"  - {r['name']} (₹{r['price']:.0f}) — {r['description']} [{stock_note}]")
     return "\n".join(lines).strip()
 
 

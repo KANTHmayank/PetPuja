@@ -24,29 +24,29 @@ def test_unit_and_pricing():
     samosa_piece = db.get_piece_info("samosa")
     print("Samosa piece info:", samosa_piece)
     assert samosa_piece["has_pieces"] is True
-    assert samosa_piece["price_per_piece"] == 2.00
+    assert samosa_piece["price_per_piece"] == 30.00
 
     gj_piece = db.get_piece_info("gulab jamun")
     print("Gulab Jamun piece info:", gj_piece)
     assert gj_piece["has_pieces"] is True
-    assert gj_piece["price_per_piece"] == 2.25
+    assert gj_piece["price_per_piece"] == 40.00
 
     rasmalai_piece = db.get_piece_info("rasmalai")
     print("Rasmalai piece info:", rasmalai_piece)
     assert rasmalai_piece["has_pieces"] is True
-    assert rasmalai_piece["price_per_piece"] == 2.75
+    assert rasmalai_piece["price_per_piece"] == 60.00
 
     # Test take_order with piece items
     res_gj = tools.take_order.invoke({"item": "gulab jamun (pcs)", "qty": 5})
     print("take_order 5 pcs gulab jamun:", res_gj)
     assert res_gj["status"] == "valid"
-    assert res_gj["price"] == 2.25
+    assert res_gj["price"] == 40.00
     assert res_gj["qty"] == 5
 
     res_sam = tools.take_order.invoke({"item": "3 pcs samosa", "qty": 1})
     print("take_order 3 pcs samosa:", res_sam)
     assert res_sam["status"] == "valid"
-    assert res_sam["price"] == 2.00
+    assert res_sam["price"] == 30.00
     assert res_sam["qty"] == 3
 
     print(">>> Test 1 passed!\n")
@@ -101,16 +101,16 @@ def test_full_graph_conversation():
     assert len(items) == 1
     assert "pcs" in items[0]["item"].lower()
     assert items[0]["qty"] == 5
-    assert items[0]["price"] == 2.25
-    assert total_bill == 11.25, f"Expected $11.25, got {total_bill}"
-    print(">>> 5 pieces of Gulab Jamun accurately priced at $11.25!\n")
+    assert items[0]["price"] == 40.00
+    assert total_bill == 200.00, f"Expected ₹200.00, got {total_bill}"
+    print(">>> 5 pieces of Gulab Jamun accurately priced at ₹200.00!\n")
 
     # Turn 3: Confirm the order
     print("--- Turn 3: Confirm order ---")
     res3 = agent_app.invoke(Command(resume="yes"), config=config)
     final_reply = res3["messages"][-1].content
     print("Final Agent Receipt:\n", final_reply)
-    assert "11.25" in final_reply, f"Receipt should show $11.25 total bill, got:\n{final_reply}"
+    assert "200" in final_reply, f"Receipt should show ₹200 total bill, got:\n{final_reply}"
     print(">>> Test 2 passed!\n")
 
 def test_samosa_and_rasmalai():
@@ -141,8 +141,8 @@ def test_samosa_and_rasmalai():
     print("Samosa total bill:", total_bill)
     assert len(items) == 1
     assert items[0]["qty"] == 3
-    assert items[0]["price"] == 2.00
-    assert total_bill == 6.00, f"Expected $6.00 for 3 pcs samosa, got {total_bill}"
+    assert items[0]["price"] == 30.00
+    assert total_bill == 90.00, f"Expected ₹90.00 for 3 pcs samosa, got {total_bill}"
 
     # Test Rasmalai 5 pcs
     time.sleep(2.0)
@@ -169,8 +169,8 @@ def test_samosa_and_rasmalai():
     print("Rasmalai total bill:", total_bill2)
     assert len(items2) == 1
     assert items2[0]["qty"] == 5
-    assert items2[0]["price"] == 2.75
-    assert total_bill2 == 13.75, f"Expected $13.75 for 5 pcs rasmalai, got {total_bill2}"
+    assert items2[0]["price"] == 60.00
+    assert total_bill2 == 300.00, f"Expected ₹300.00 for 5 pcs rasmalai, got {total_bill2}"
 
     print(">>> Test 3 passed!\n")
 
@@ -199,8 +199,8 @@ def test_combination_and_portion_regression():
     print("Combo items:", items)
     print("Combo total bill:", total_bill)
     assert len(items) == 2
-    # 1 biryani @ 13.00, 3 samosa pcs @ 2.00 = 6.00 -> total = 19.00
-    assert total_bill == 19.00, f"Expected $19.00, got {total_bill}"
+    # 1 biryani @ 340.00, 3 samosa pcs @ 30.00 = 90.00 -> total = 430.00
+    assert total_bill == 430.00, f"Expected ₹430.00, got {total_bill}"
 
     # Test explicit plates/portions: "2 plates of samosa and 1 beer"
     time.sleep(2.0)
@@ -226,10 +226,10 @@ def test_combination_and_portion_regression():
     print("Plates items:", items2)
     print("Plates total bill:", total_bill2)
     assert len(items2) == 2
-    # 2 plates of samosa @ 4.00 = 8.00, 1 beer @ 6.50 = 6.50 -> total = 14.50
-    assert total_bill2 == 14.50, f"Expected $14.50 for 2 plates of samosa + beer, got {total_bill2}"
+    # 2 plates of samosa @ 60.00 = 120.00, 1 beer @ 220.00 = 220.00 -> total = 340.00
+    assert total_bill2 == 340.00, f"Expected ₹340.00 for 2 plates of samosa + beer, got {total_bill2}"
 
-    # Also test discrete count "2 samosas" (which is 2 pieces @ 2.00 = $4.00 + $6.50 = $10.50)
+    # Also test discrete count "2 samosas" (which is 2 portions @ 60.00 = 120.00 + 220.00 = 340.00)
     thread_id3 = f"test-discrete-{uuid.uuid4()}"
     config3 = {"configurable": {"thread_id": thread_id3}}
     res3 = agent_app.invoke(
@@ -249,7 +249,7 @@ def test_combination_and_portion_regression():
     state3 = agent_app.get_state(config3)
     total_bill3 = state3.values.get("total_bill")
     print("Discrete '2 samosas' total bill:", total_bill3)
-    assert total_bill3 == 14.50, f"Expected $14.50 for 2 samosas + beer, got {total_bill3}"
+    assert total_bill3 == 340.00, f"Expected ₹340.00 for 2 samosas + beer, got {total_bill3}"
     print(">>> Test 4 passed!\n")
 
 if __name__ == "__main__":

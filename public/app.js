@@ -143,13 +143,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const dietaryFilterBar = document.getElementById('dietaryFilterBar');
+  let currentDiet = 'all';
+
+  if (dietaryFilterBar) {
+    dietaryFilterBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.diet-btn');
+      if (btn) {
+        document.querySelectorAll('.diet-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentDiet = btn.getAttribute('data-diet');
+        renderMenu();
+      }
+    });
+  }
+
   function renderMenu() {
     const searchTerm = menuSearchInput.value.toLowerCase().trim();
     const filtered = menuData.filter(item => {
       const matchCategory = currentCategory === 'all' || item.category === currentCategory;
+      let matchDiet = true;
+      if (currentDiet === 'veg') {
+        matchDiet = item.is_veg === 1;
+      } else if (currentDiet === 'non-veg') {
+        matchDiet = item.is_veg === 0;
+      }
       const matchSearch = item.name.toLowerCase().includes(searchTerm) || 
                           (item.description && item.description.toLowerCase().includes(searchTerm));
-      return matchCategory && matchSearch;
+      return matchCategory && matchDiet && matchSearch;
     });
 
     if (filtered.length === 0) {
@@ -181,19 +202,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const catBadge = categoryLabels[item.category] || item.category;
 
+      // Dietary Veg / Non-Veg Indicator
+      const vegBadge = item.is_veg === 1
+        ? `<span class="diet-badge veg" title="Pure Vegetarian"><span class="diet-dot veg"></span></span>`
+        : `<span class="diet-badge non-veg" title="Non-Vegetarian"><span class="diet-dot non-veg"></span></span>`;
+
+      // Customer Rating Badge
+      const ratingBadge = item.rating 
+        ? `<span class="rating-badge" title="Customer Rating: ${item.rating.toFixed(1)}/5 (${item.rating_count} reviews)">⭐ ${item.rating.toFixed(1)} <span class="rating-count">(${item.rating_count})</span></span>`
+        : '';
+
+      // Selective Spice Indicator (only for relevant dishes)
+      const spiceBadge = item.spice_level
+        ? `<span class="spice-pill spice-${item.spice_level.toLowerCase()}">🌶️ ${item.spice_level}</span>`
+        : '';
+
+      // Alcohol %age (only for spirits / bar cocktails)
+      const alcoholBadge = item.alcohol_pct
+        ? `<span class="alcohol-pill">🍷 ${item.alcohol_pct}% ABV</span>`
+        : '';
+
+      // Fallback image URL
+      const imgUrl = item.image_url || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=400&q=80';
+
       return `
         <div class="menu-item-card ${isOutOfStock ? 'out-of-stock' : ''}" data-item-name="${item.name}">
-          <div class="item-top-row">
-            <h3 class="item-name">${item.name}</h3>
-            <span class="item-price">$${item.price.toFixed(2)}</span>
-          </div>
-          <p class="item-desc">${item.description || 'Prepared fresh with chef choice herbs.'}</p>
-          <div class="item-bottom-row">
-            <div class="item-meta-group">
-              <span class="category-pill">${catBadge}</span>
-              <span class="stock-pill ${stockClass}">${stockText}</span>
+          <div class="item-card-main">
+            <div class="item-info-col">
+              <div class="item-top-row">
+                <div class="item-title-wrap">
+                  ${vegBadge}
+                  <h3 class="item-name">${item.name}</h3>
+                </div>
+                <span class="item-price">₹${Math.round(item.price)}</span>
+              </div>
+              <div class="item-meta-tags">
+                ${ratingBadge}
+                ${spiceBadge}
+                ${alcoholBadge}
+              </div>
+              <p class="item-desc">${item.description || 'Prepared fresh with chef choice herbs.'}</p>
+              <div class="item-bottom-row">
+                <div class="item-meta-group">
+                  <span class="category-pill">${catBadge}</span>
+                  <span class="stock-pill ${stockClass}">${stockText}</span>
+                </div>
+                <span class="item-action-link">${isOutOfStock ? 'Ask about it' : 'Ask or Order →'}</span>
+              </div>
             </div>
-            <span class="item-action-link">${isOutOfStock ? 'Ask about it' : 'Ask or Order →'}</span>
+            <div class="item-media-col">
+              <img src="${imgUrl}" alt="${item.name}" class="item-dish-img" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=400&q=80';" />
+            </div>
           </div>
         </div>
       `;
@@ -401,12 +460,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     confirmItemsList.innerHTML = validItems.map(item => `
       <div class="confirm-line-item">
-        <span>${item.qty}x ${item.item} ($${item.price.toFixed(2)} each)</span>
-        <strong>$${(item.qty * item.price).toFixed(2)}</strong>
+        <span>${item.qty}x ${item.item} (₹${item.price.toFixed(2)} each)</span>
+        <strong>₹${(item.qty * item.price).toFixed(2)}</strong>
       </div>
     `).join('');
 
-    confirmTotalAmount.textContent = `$${total.toFixed(2)}`;
+    confirmTotalAmount.textContent = `₹${total.toFixed(2)}`;
 
     // Show Confirmation Card, hide others
     trackerIdleView.style.display = 'none';
@@ -415,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
     confirmationCard.style.display = 'flex';
 
     const pairingMessage = data.prompt 
-      ? data.prompt.replace(/Order Summary:[\s\S]*?Total: \$[\d.]+\n\n?/, '').trim()
+      ? data.prompt.replace(/Order Summary:[\s\S]*?Total: [₹\$][\d.]+\n\n?/, '').trim()
       : "I have put together your order summary in the Kitchen Tracker. Please confirm if everything looks good to fire up the kitchen!";
 
     appendMessage('Agent', pairingMessage, false);
@@ -428,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
         actionWrap.className = 'mobile-action-shortcut';
         actionWrap.innerHTML = `
           <button type="button" class="btn btn-primary" id="mobileGoToConfirmBtn">
-            📋 Review & Confirm Order in Tracker ($${total.toFixed(2)}) →
+            📋 Review & Confirm Order in Tracker (₹${total.toFixed(2)}) →
           </button>
         `;
         actionWrap.querySelector('#mobileGoToConfirmBtn').addEventListener('click', () => {
@@ -566,8 +625,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="receipt-row">
           <span style="text-transform: capitalize;">${item.item}</span>
           <span>${item.qty}</span>
-          <span>$${item.price.toFixed(2)}</span>
-          <span>$${(item.qty * item.price).toFixed(2)}</span>
+          <span>₹${item.price.toFixed(2)}</span>
+          <span>₹${(item.qty * item.price).toFixed(2)}</span>
         </div>
       `).join('');
 
@@ -576,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span style="text-transform: capitalize;">⚠️ ${item.item} (Cancelled)</span>
           <span>${item.qty}</span>
           <span>Deducted</span>
-          <span>$0.00</span>
+          <span>₹0.00</span>
         </div>
       `).join('');
 
@@ -585,7 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const grandTotal = (state.total_bill !== null && state.total_bill !== undefined)
         ? state.total_bill 
         : served.reduce((acc, i) => acc + (i.qty * i.price), 0);
-      receiptGrandTotal.textContent = `$${grandTotal.toFixed(2)}`;
+      receiptGrandTotal.textContent = `₹${grandTotal.toFixed(2)}`;
 
       // Add receipt shortcut button to chat bubble on mobile
       if (window.innerWidth <= 900) {

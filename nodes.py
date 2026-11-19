@@ -125,7 +125,7 @@ Your responsibilities:
    - If the guest explicitly wants to order/buy food or drink items (e.g. "I'll have 2 samosas and a beer", "3 pcs samosa", "bring me butter chicken with garlic naan and an LIIT", "I want a whiskey and chicken tikka", "okay so i would like to order 5 pieces"):
      Set `is_order: True` and extract each item and quantity into `items`.
      IMPORTANT PIECE-LEVEL VS. PORTION-LEVEL EXTRACTION:
-     - For items sold with piece counts in description (e.g. Samosa 2 pcs @ $4.00, Gulab Jamun 2 pcs @ $4.50, Rasmalai 2 pcs @ $5.50):
+     - For items sold with piece counts in description (e.g. Samosa 2 pcs @ ₹60, Gulab Jamun 2 pcs @ ₹80, Rasmalai 2 pcs @ ₹120):
        If the customer orders individual pieces (e.g. "5 pieces", "3 pcs samosa", "5 pieces of rasmalai", "3 pieces of gulab jamun"):
        Set `item: <canonical name>`, `quantity: <number of pieces>`, and `unit: "piece"`.
        For example, when ordering "5 pieces" after discussing gulab jamun -> item="gulab jamun", quantity=5, unit="piece".
@@ -142,7 +142,7 @@ Your responsibilities:
      - Recommendations & Best Dishes: If asked for recommendations (e.g. "i have no issue of budget. just want to have the best dish here" or "what do you recommend?"):
        Suggest a royal PetPuja feast! For example: Start with smoky Chicken Tikka or crisp Samosas, follow with royal Butter Chicken or Paneer Butter Masala paired with crisp Garlic Naan or fragrant Chicken Dum Biryani, accompanied by an LIIT or chilled Beer, and finish with melt-in-mouth Rasmalai or Gulab Jamun. Never ask for a budget if the customer said budget is no issue!
      - Bar & Drinks Inquiries: If asked about drinks, bar options, cocktails, or spirits (e.g. "what do you have in bar?", "do you have whiskey or beer?", "what cocktails do you serve?"), highlight our signature LIIT, single malt Whiskey, chilled Beers, classic Mojito, and Spicy Guava Cocktail, plus Mango Lassi and Masala Chai for non-alcoholic guests.
-     - Budget Inquiries: If the guest mentions a specific budget (e.g. "I have $15"), suggest delicious in-stock combinations or items fitting that budget (e.g., Samosa + Dal Makhani + Garlic Naan or Veg Chowmein + Mango Lassi).
+     - Budget Inquiries: If the guest mentions a specific budget (e.g. "I have ₹500" or "budget of ₹400"), suggest delicious in-stock combinations or items fitting that budget (e.g., Samosa + Dal Makhani + Garlic Naan or Veg Chowmein + Mango Lassi).
      - Category Inquiries: If asked about a category (e.g. "what starters do you have?"), present only that category clearly with prices.
      - Full Menu Request: Only if the guest asks to see the entire menu ("what's on the menu?"), provide a clean overview of our categories (Starters, Mains, Desserts, Bar & Spirits, Drinks).
      - Dining banter / Greetings: Be warm, charming, and welcoming.
@@ -295,7 +295,7 @@ def confirm_order_node(state: RestaurantState) -> dict:
     and wait for confirmation, cancellation, or incremental modifications."""
     valid_items = [l for l in state["items"] if l["menu_status"] == "valid"]
     lines = [
-        f"  - {l['qty']}x {l['item']} @ ${l['price']:.2f} = ${l['qty'] * l['price']:.2f}"
+        f"  - {l['qty']}x {l['item']} @ ₹{l['price']:.2f} = ₹{l['qty'] * l['price']:.2f}"
         for l in valid_items
     ]
     total = sum(l["qty"] * l["price"] for l in valid_items)
@@ -312,16 +312,16 @@ def confirm_order_node(state: RestaurantState) -> dict:
     )
 
     if not has_drink:
-        pairing_tip = "💡 Pair with a Drink: Would you like to add a chilled Beer ($6.50), signature LIIT ($12.00), or Mango Lassi ($4.00) alongside before I fire up the kitchen?"
+        pairing_tip = "💡 Pair with a Drink: Would you like to add a chilled Beer (₹220), signature LIIT (₹380), or Mango Lassi (₹110) alongside before I fire up the kitchen?"
     elif has_main_curry_or_biryani and not has_bread:
-        pairing_tip = "💡 Add Breads: Would you like to add some hot Garlic Naan ($3.50) or Butter Naan ($3.00) alongside?"
+        pairing_tip = "💡 Add Breads: Would you like to add some hot Garlic Naan (₹60) or Butter Naan (₹50) alongside?"
     else:
         pairing_tip = "Shall I place this order with the kitchen, or would you like to add anything else?"
 
     prompt = (
         "Order Summary:\n"
         + "\n".join(lines)
-        + f"\nTotal: ${total:.2f}\n\n"
+        + f"\nTotal: ₹{total:.2f}\n\n"
         + pairing_tip
         + "\n(Confirm with 'yes', cancel with 'no', or simply tell me what else to add!)"
     )
@@ -451,7 +451,7 @@ def respond_node(state: RestaurantState) -> dict:
         # Bill ONLY for the items that were successfully served to the table
         actual_total = sum(l["qty"] * l["price"] for l in served_items)
         receipt_lines = [
-            f"  - {l['qty']}x {l['item']} @ ${l['price']:.2f} = ${l['qty'] * l['price']:.2f}"
+            f"  - {l['qty']}x {l['item']} @ ₹{l['price']:.2f} = ₹{l['qty'] * l['price']:.2f}"
             for l in served_items
         ]
         divider = "-" * 42
@@ -464,14 +464,14 @@ def respond_node(state: RestaurantState) -> dict:
                 f"{divider}\n"
                 + "\n".join(receipt_lines)
                 + f"\n{divider}\n"
-                + f"Total Bill: ${actual_total:.2f}\n\n"
+                + f"Total Bill: ₹{actual_total:.2f}\n\n"
                 + "Swadist bhojan aur drinks ka anand lijiye! (Enjoy your delicious meal & drinks!) 🙏"
             )
         else:
             # Partial fulfillment: some items served, some failed in kitchen/bar
             order_status = "successful"
             failed_notes = [
-                f"  - {l['qty']}x {l['item']} could not be prepared ({l.get('error') or 'kitchen issue'}) and was DEDUCTED ($0.00 charged)."
+                f"  - {l['qty']}x {l['item']} could not be prepared ({l.get('error') or 'kitchen issue'}) and was DEDUCTED (₹0.00 charged)."
                 for l in failed_items
             ]
             text = (
@@ -480,7 +480,7 @@ def respond_node(state: RestaurantState) -> dict:
                 f"{divider}\n"
                 + "\n".join(receipt_lines)
                 + f"\n{divider}\n"
-                + f"Total Bill: ${actual_total:.2f}\n\n"
+                + f"Total Bill: ₹{actual_total:.2f}\n\n"
                 + "⚠️ Kitchen Update:\n"
                 + "\n".join(failed_notes)
                 + "\n\nYou have NOT been charged for unfulfilled items. If you would like to retry the missing dish or pick an alternative, just let Ramoo Kaka know! 🙏"
@@ -502,7 +502,7 @@ def respond_node(state: RestaurantState) -> dict:
         order_status = "unsuccessful"
         reasons = [f"{l['item']} ({l.get('error') or 'kitchen issue'})" for l in failed_items]
         reason_str = "; ".join(reasons)
-        text = f"Order Unsuccessful: Kitchen issue with {reason_str}. No charges were made ($0.00). Would you like to try a different dish?"
+        text = f"Order Unsuccessful: Kitchen issue with {reason_str}. No charges were made (₹0.00). Would you like to try a different dish?"
     else:
         order_status = "unsuccessful"
         reason = state.get("error") or "An unexpected issue occurred while processing your order"

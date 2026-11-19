@@ -56,7 +56,8 @@ def get_menu():
     """Return all menu items with real-time stock and prices."""
     with db._connect() as conn:
         rows = conn.execute(
-            "SELECT id, name, category, price, stock, description FROM menu_items ORDER BY category, name"
+            "SELECT id, name, category, price, stock, description, image_url, is_veg, spice_level, alcohol_pct, rating, rating_count "
+            "FROM menu_items ORDER BY category, name"
         ).fetchall()
     return [
         {
@@ -66,6 +67,12 @@ def get_menu():
             "price": r["price"],
             "stock": r["stock"],
             "description": r["description"],
+            "image_url": r["image_url"],
+            "is_veg": r["is_veg"],
+            "spice_level": r["spice_level"],
+            "alcohol_pct": r["alcohol_pct"],
+            "rating": r["rating"],
+            "rating_count": r["rating_count"],
         }
         for r in rows
     ]

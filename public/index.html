@@ -82,6 +82,13 @@
           <button class="tab-btn" data-category="drink" id="tabDrink">Drinks ☕</button>
         </div>
 
+        <!-- Dietary Filter Toggle (All / Pure Veg / Non-Veg) -->
+        <div class="dietary-filter-bar" id="dietaryFilterBar">
+          <button class="diet-btn active" data-diet="all" id="dietAll">All Foods</button>
+          <button class="diet-btn" data-diet="veg" id="dietVeg"><span class="diet-indicator veg"></span> Pure Veg</button>
+          <button class="diet-btn" data-diet="non-veg" id="dietNonVeg"><span class="diet-indicator non-veg"></span> Non-Veg</button>
+        </div>
+
         <div class="menu-search-wrap">
           <span class="search-icon">🔍</span>
           <input type="text" id="menuSearchInput" class="menu-search-input" placeholder="Search dishes, cocktails, biryani, starters...">
@@ -118,8 +125,8 @@
               <div class="msg-sender">Ramoo Kaka • PetPuja Maitre D'</div>
               <div class="msg-text">
                 <strong>Namaste & Swagat Hai! 🙏 Welcome to PetPuja Smart Bistro & Bar.</strong><br>
-                I am your personal dining host. We feature rich Indian specialties like smoky <em>Chicken Tikka</em>, velvety <em>Butter Chicken</em> with hot <em>Garlic Naan</em>, <em>Samosas</em>, <em>Chowmein</em>, alongside our spirited bar offering <em>LIIT</em>, single-malt <em>Whiskey</em>, chilled beers, and handcrafted cocktails.<br><br>
-                Feel free to ask for chef recommendations, explore drinks, check dish availability, or place your order!
+                I am your personal dining host. Explore our authentic culinary specialties like smoky <em>Chicken Tikka (₹280)</em>, rich <em>Butter Chicken (₹380)</em> with hot <em>Garlic Naan (₹60)</em>, crispy <em>Samosas (₹60)</em>, <em>Chowmein</em>, alongside our spirited bar offering <em>LIIT (22% ABV)</em>, single-malt <em>Whiskey (42.8% ABV)</em>, chilled craft beers, and refreshing cocktails.<br><br>
+                Feel free to ask for chef recommendations, explore drinks, check ratings, or place your order!
               </div>
               <div class="msg-timestamp" id="welcomeTimestamp">Just now</div>
             </div>
@@ -129,11 +136,12 @@
         <!-- Quick Starter Recommendation Chips -->
         <div class="quick-chips-bar" id="quickChipsBar">
           <span class="chips-label">Try asking:</span>
-          <button class="chip-btn" data-query="What do you have in the bar? Tell me about your cocktails and whiskey.">🍸 Bar & Cocktails</button>
+          <button class="chip-btn" data-query="What do you have in the bar? Tell me about your cocktails, ABV and whiskey.">🍸 Bar & Spirits (ABV)</button>
           <button class="chip-btn" data-query="Suggest a royal feast! I have no issue of budget.">👑 Royal Feast (No Budget)</button>
+          <button class="chip-btn" data-query="Tell me about your highest rated dishes. What has 4.9 stars?">⭐ Highest Rated Dishes</button>
           <button class="chip-btn" data-query="Tell me about your chicken tikka and butter chicken with garlic naan.">🍗 Butter Chicken & Tikka</button>
-          <button class="chip-btn" data-query="What starters do you have? Samosa or chowmein?">🥟 Samosa & Chowmein</button>
-          <button class="chip-btn" data-query="I have 15 dollars, what is the best Indian combo?">💰 Budget $15 Combo</button>
+          <button class="chip-btn" data-query="What pure veg starters do you have?">🥬 Pure Veg Starters</button>
+          <button class="chip-btn" data-query="I have a budget of ₹400, what is the best Indian combo?">💰 Budget ₹400 Combo</button>
           <button class="chip-btn" data-query="Is chicken pizza available?">🍕 Chicken Pizza?</button>
         </div>
 
@@ -213,7 +221,7 @@
 
             <div class="confirm-total-row">
               <span>Total Bill Amount:</span>
-              <strong id="confirmTotalAmount">$0.00</strong>
+              <strong id="confirmTotalAmount">₹0.00</strong>
             </div>
 
             <div class="confirm-actions-row">
@@ -260,7 +268,7 @@
               <div class="receipt-divider">----------------------------------------</div>
               <div class="receipt-total-row">
                 <span>GRAND TOTAL:</span>
-                <span id="receiptGrandTotal">$0.00</span>
+                <span id="receiptGrandTotal">₹0.00</span>
               </div>
               <div class="receipt-footer">
                 <p>⭐⭐⭐⭐⭐</p>

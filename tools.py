@@ -76,7 +76,7 @@ def take_order(item: str, qty: int) -> dict:
             }
         return {
             "status": "valid",
-            "reason": f"{qty} pcs {canonical_name} confirmed (@ ${price:.2f}/pc)",
+            "reason": f"{qty} pcs {canonical_name} confirmed (@ ₹{price:.2f}/pc)",
             "price": price,
             "item": f"{canonical_name} (pcs)",
             "qty": qty,
